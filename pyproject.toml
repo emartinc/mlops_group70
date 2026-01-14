@@ -3,11 +3,11 @@ requires = ["uv_build>=0.9.22,<0.10.0"]
 build-backend = "uv_build"
 
 [project]
-name = "src"
+name = "mbti_classifier"
 version = "0.0.1"
 description = "This project implements a multi-class NLP classifier utilizing machine learning to predict one of sixteen Myers-Briggs personality types based on a user\u0027s linguistic patterns and writing style."
 authors = [
-  { name = "Your name (or your organization/company/team)", email = "your@email.com" },
+  { name = ".", email = "your@email.com" },
 ]
 
 keywords = ["machine learning", "MLOps"]
@@ -18,7 +18,10 @@ classifiers = [
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "dotenv>=0.9.9",
     "fastapi==0.115.6",
+    "mlcroissant>=1.0.22",
+    "pandas>=2.3.3",
     "torch==2.6.0",
     "typer==0.15.1",
     "uvicorn==0.34.0",
@@ -37,6 +40,8 @@ dev = [
 ]
 
 
+
+
 [tool.uv.sources]
 torch = [
     { index = "pytorch-cpu" },
@@ -52,6 +57,12 @@ explicit = true
 
 [tool.ruff]
 line-length = 120
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
 
 [tool.coverage.run]
 omit = ["tests/*"]

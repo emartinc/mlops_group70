@@ -1,5 +1,5 @@
-from src.model import Model
-from src.data import MyDataset
+from mbti_classifier.model import Model
+from mbti_classifier.data import MyDataset
 
 def train():
     dataset = MyDataset("data/raw")

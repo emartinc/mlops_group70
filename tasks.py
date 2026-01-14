@@ -1,9 +1,11 @@
 import os
-
+from dotenv import load_dotenv
 from invoke import Context, task
 
+load_dotenv()
+
 WINDOWS = os.name == "nt"
-PROJECT_NAME = "src"
+PROJECT_NAME = "mbti_classifier"
 PYTHON_VERSION = "3.12"
 
 # Project commands
