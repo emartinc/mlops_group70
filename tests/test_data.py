@@ -1,6 +1,6 @@
 from torch.utils.data import Dataset
 
-from src.data import MyDataset
+from mbti_classifier.data import MyDataset
 
 
 def test_my_dataset():
