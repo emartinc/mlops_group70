@@ -30,7 +30,7 @@ class MBTITrainDataset(Dataset):
         return len(self.labels)
 
 def train_models(
-    processed_data_path: Path = Path("data/processed"),
+    processed_data_path: Path = Path("/Users/estelamartincebrian/Desktop/mlops_group70/data/processed"),
     output_model_dir: Path = Path("models"),
     epochs: int = 1,
     batch_size: int = 8 
