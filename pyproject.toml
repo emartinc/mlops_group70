@@ -23,6 +23,7 @@ dependencies = [
     "mlcroissant>=1.0.22",
     "pandas>=2.3.3",
     "torch==2.6.0",
+    "transformers>=4.57.5",
     "typer==0.15.1",
     "uvicorn==0.34.0",
 ]

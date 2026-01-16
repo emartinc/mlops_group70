@@ -80,7 +80,7 @@ Run the following commands to create the virtual environment, install dependenci
 ```bash
 # 1. Sync dependencies (creates .venv and installs dev tools)
 uv sync --dev
-
+uv add transformers 
 # 2. Install pre-commit hooks (ensures code quality on commit)
 uv run pre-commit install --install-hooks
 
