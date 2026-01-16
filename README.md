@@ -1,6 +1,8 @@
 ````markdown
 # mbti_classifier
 
+# mbti_classifier
+
 This project implements a multi-class NLP classifier utilizing machine learning to predict one of sixteen Myers-Briggs personality types based on a user's linguistic patterns and writing style.
 
 ## Project structure
