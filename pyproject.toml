@@ -26,6 +26,7 @@ dependencies = [
     "transformers>=4.57.5",
     "typer==0.15.1",
     "uvicorn==0.34.0",
+    "scikit-learn>=1.5.0",
 ]
 
 [dependency-groups]
