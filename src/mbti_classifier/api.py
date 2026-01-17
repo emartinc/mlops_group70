@@ -14,10 +14,9 @@ from typing import Dict, List
 import torch
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from mbti_classifier.model import MBTIClassifier
 from pydantic import BaseModel, Field
 from transformers import AutoTokenizer
-
-from mbti_classifier.training.model import MBTIClassifier
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -97,9 +96,9 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to load model: {e}")
         raise
-    
+
     yield
-    
+
     # Shutdown (cleanup if needed)
     logger.info("Shutting down...")
 
@@ -184,13 +183,12 @@ async def predict(request: PredictionRequest):
 
         if len(text) < 10:
             raise HTTPException(
-                status_code=400, detail="Text too short after cleaning. Please provide more text (at least 10 characters)."
+                status_code=400,
+                detail="Text too short after cleaning. Please provide more text (at least 10 characters).",
             )
 
         # Tokenize
-        encoding = tokenizer(
-            text, max_length=512, padding="max_length", truncation=True, return_tensors="pt"
-        )
+        encoding = tokenizer(text, max_length=512, padding="max_length", truncation=True, return_tensors="pt")
 
         # Move to device
         input_ids = encoding["input_ids"].to(device)

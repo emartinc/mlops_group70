@@ -5,9 +5,9 @@ Usage:
     uv run streamlit run src/mbti_classifier/api/ui.py
 """
 
+import plotly.graph_objects as go
 import requests
 import streamlit as st
-import plotly.graph_objects as go
 
 # API Configuration
 API_URL = "http://localhost:8000"
