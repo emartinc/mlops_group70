@@ -1,0 +1,49 @@
+# Production training configuration with best practices
+# Override main config with: python train.py --config-name=train_production
+
+defaults:
+  - train
+  - _self_
+
+experiment_name: mbti_production
+
+data:
+  batch_size: 16
+  num_workers: 8
+  max_length: 512
+
+model:
+  model_name: distilbert-base-uncased
+  learning_rate: 2e-5
+  weight_decay: 0.01
+  warmup_steps: 1000
+  dropout: 0.1
+  freeze_encoder: false
+  freeze_layers: 0
+
+trainer:
+  max_epochs: 20
+  precision: 16  # Mixed precision
+  gradient_clip_val: 1.0
+  accumulate_grad_batches: 2  # Effective batch size = 32
+
+callbacks:
+  model_checkpoint:
+    dirpath: models/checkpoints/production
+    save_top_k: 5
+  
+  early_stopping:
+    patience: 5
+    min_delta: 0.0001
+
+early_stopping_enabled: true
+run_test: true
+save_final_model: true
+
+logger:
+  log_model: true  # Save best models to W&B
+  tags:
+    - production
+    - distilbert
+    - mbti
+    - fine-tuning

@@ -1,0 +1,100 @@
+# Main training configuration
+defaults:
+  - _self_
+
+# Experiment name
+experiment_name: mbti_distilbert
+
+# Random seed for reproducibility
+seed: 42
+
+# Data configuration
+data:
+  _target_: mbti_classifier.training.data.MBTIDataModule
+  raw_data_path: data/raw
+  processed_data_path: data/processed
+  batch_size: 16
+  num_workers: 4
+  test_size: 0.05
+  val_size: 0.10
+  random_seed: ${seed}
+  model_name: ${model.model_name}
+  max_length: 512
+  cache_dir: null  # Set to cache models/tokenizers in a specific directory
+
+# Model configuration
+model:
+  _target_: mbti_classifier.training.model.MBTIClassifier
+  model_name: distilbert-base-uncased
+  learning_rate: 2e-5
+  weight_decay: 0.01
+  warmup_steps: 500
+  dropout: 0.1
+  freeze_encoder: false
+  freeze_layers: 0  # Number of layers to freeze (from bottom)
+
+# Trainer configuration
+trainer:
+  _target_: pytorch_lightning.Trainer
+  max_epochs: 10
+  accelerator: auto  # auto, cpu, gpu, tpu, mps
+  devices: auto  # auto, 1, 2, etc.
+  precision: 32  # 16, 32, bf16
+  gradient_clip_val: 1.0
+  accumulate_grad_batches: 1
+  deterministic: false
+  log_every_n_steps: 10
+  val_check_interval: 1.0  # Validate every epoch
+  enable_checkpointing: true
+  enable_progress_bar: true
+  enable_model_summary: true
+  
+# Callbacks configuration
+callbacks:
+  model_checkpoint:
+    _target_: pytorch_lightning.callbacks.ModelCheckpoint
+    dirpath: models/checkpoints
+    filename: best
+    monitor: val_avg_f1
+    mode: max
+    save_top_k: 1
+    save_last: true
+    verbose: true
+  
+  lr_monitor:
+    _target_: pytorch_lightning.callbacks.LearningRateMonitor
+    logging_interval: step
+  
+  progress_bar:
+    _target_: pytorch_lightning.callbacks.RichProgressBar
+  
+  early_stopping:
+    _target_: pytorch_lightning.callbacks.EarlyStopping
+    monitor: val_avg_f1
+    patience: 3
+    mode: max
+    verbose: true
+    min_delta: 0.001
+
+# Early stopping toggle
+early_stopping_enabled: true
+
+# Testing toggle
+run_test: true
+
+# Save final model toggle
+save_final_model: true
+
+# Logging configuration
+logger:
+  _target_: pytorch_lightning.loggers.WandbLogger
+  project: mbti-classification
+  name: ${experiment_name}
+  save_dir: logs
+  log_model: false  # Set to true to save model artifacts to W&B
+  tags:
+    - distilbert
+    - mbti
+    - fine-tuning
+
+use_wandb: true
