@@ -90,16 +90,16 @@ class MBTIClassifier(pl.LightningModule):
         for task_name in task_names:
             metrics[task_name] = MetricCollection(
                 {
-                    f"{prefix}_{task_name}_acc": Accuracy(task="binary"),
-                    f"{prefix}_{task_name}_f1": F1Score(task="binary"),
+                    f"{prefix}/{task_name}_acc": Accuracy(task="binary"),
+                    f"{prefix}/{task_name}_f1": F1Score(task="binary"),
                 }
             )
 
         # Overall metrics (average across all tasks)
         metrics["overall"] = MetricCollection(
             {
-                f"{prefix}_avg_acc": Accuracy(task="binary"),
-                f"{prefix}_avg_f1": F1Score(task="binary"),
+                f"{prefix}/avg_acc": Accuracy(task="binary"),
+                f"{prefix}/avg_f1": F1Score(task="binary"),
             }
         )
 
@@ -191,7 +191,7 @@ class MBTIClassifier(pl.LightningModule):
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """Training step."""
         outputs = self._shared_step(batch, "train")
-        self.log("train_loss", outputs["loss"], on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log("train/loss", outputs["loss"], on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
         return outputs["loss"]
 
     def on_train_epoch_end(self):
@@ -205,7 +205,7 @@ class MBTIClassifier(pl.LightningModule):
     def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """Validation step."""
         outputs = self._shared_step(batch, "val")
-        self.log("val_loss", outputs["loss"], on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log("val/loss", outputs["loss"], on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
         return outputs["loss"]
 
     def on_validation_epoch_end(self):
@@ -219,7 +219,7 @@ class MBTIClassifier(pl.LightningModule):
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """Test step."""
         outputs = self._shared_step(batch, "test")
-        self.log("test_loss", outputs["loss"], on_step=False, on_epoch=True, sync_dist=True)
+        self.log("test/loss", outputs["loss"], on_step=False, on_epoch=True, sync_dist=True)
         return outputs["loss"]
 
     def on_test_epoch_end(self):
