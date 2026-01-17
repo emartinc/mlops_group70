@@ -1,0 +1,33 @@
+# Quick training configuration for fast experiments
+# Override main config with: python train.py --config-name=train_quick
+
+defaults:
+  - train
+  - _self_
+
+experiment_name: mbti_quick_test
+
+# Reduced settings for quick experiments
+data:
+  batch_size: 32
+  num_workers: 2
+  max_length: 256  # Shorter sequences
+
+model:
+  learning_rate: 3e-5
+  warmup_steps: 100
+
+trainer:
+  max_epochs: 3
+  precision: 16  # Mixed precision for faster training
+  val_check_interval: 0.5  # Validate twice per epoch
+
+callbacks:
+  model_checkpoint:
+    save_top_k: 1
+
+early_stopping_enabled: false
+run_test: false
+
+logger:
+  log_model: false
