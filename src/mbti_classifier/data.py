@@ -68,10 +68,10 @@ class MBTIDataset(Dataset):
                 truncation=False,
                 return_tensors="pt",
             )
-            
+
             input_ids = full_encoding["input_ids"].squeeze(0)
             total_length = len(input_ids)
-            
+
             # If sequence is longer than max_length, take a random window
             # BUT always keep [CLS] at start and [SEP] at end
             if total_length > self.max_length:
@@ -79,55 +79,47 @@ class MBTIDataset(Dataset):
                 cls_token = input_ids[0:1]  # [CLS]
                 # Extract [SEP] token (last token)
                 sep_token = input_ids[-1:]  # [SEP]
-                
+
                 # Content tokens (excluding [CLS] and [SEP])
                 content_tokens = input_ids[1:-1]
                 content_length = len(content_tokens)
-                
+
                 # Available space for content (max_length - 2 for [CLS] and [SEP])
                 max_content_length = self.max_length - 2
-                
+
                 if content_length > max_content_length:
                     # Random start position in content
                     max_start = content_length - max_content_length
                     start_idx = random.randint(0, max_start)
                     end_idx = start_idx + max_content_length
-                    
+
                     # Extract random window from content
                     content_window = content_tokens[start_idx:end_idx]
                 else:
                     # Content fits, use all of it
                     content_window = content_tokens
-                
+
                 # Reconstruct: [CLS] + content_window + [SEP]
                 input_ids = torch.cat([cls_token, content_window, sep_token])
                 attention_mask = torch.ones(len(input_ids), dtype=torch.long)
-                
+
                 # Pad if necessary
                 current_length = len(input_ids)
                 if current_length < self.max_length:
                     padding_length = self.max_length - current_length
-                    input_ids = torch.cat([
-                        input_ids,
-                        torch.full((padding_length,), self.tokenizer.pad_token_id, dtype=torch.long)
-                    ])
-                    attention_mask = torch.cat([
-                        attention_mask,
-                        torch.zeros(padding_length, dtype=torch.long)
-                    ])
+                    input_ids = torch.cat(
+                        [input_ids, torch.full((padding_length,), self.tokenizer.pad_token_id, dtype=torch.long)]
+                    )
+                    attention_mask = torch.cat([attention_mask, torch.zeros(padding_length, dtype=torch.long)])
             else:
                 # If shorter than max_length, pad normally
                 attention_mask = torch.ones(total_length, dtype=torch.long)
                 padding_length = self.max_length - total_length
                 if padding_length > 0:
-                    input_ids = torch.cat([
-                        input_ids,
-                        torch.full((padding_length,), self.tokenizer.pad_token_id, dtype=torch.long)
-                    ])
-                    attention_mask = torch.cat([
-                        attention_mask,
-                        torch.zeros(padding_length, dtype=torch.long)
-                    ])
+                    input_ids = torch.cat(
+                        [input_ids, torch.full((padding_length,), self.tokenizer.pad_token_id, dtype=torch.long)]
+                    )
+                    attention_mask = torch.cat([attention_mask, torch.zeros(padding_length, dtype=torch.long)])
         else:
             # Standard tokenization with truncation from the beginning
             encoding = self.tokenizer(
@@ -343,7 +335,7 @@ class MBTIDataModule(pl.LightningDataModule):
         """Create test DataLoader."""
         if self.test_dataset is None:
             return None
-        
+
         return DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,

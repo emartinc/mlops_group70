@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 from invoke import Context, task
 
@@ -12,12 +13,12 @@ PYTHON_VERSION = "3.12"
 @task
 def preprocess_data(ctx: Context) -> None:
     """Preprocess data."""
-    ctx.run(f"uv run src/{PROJECT_NAME}/training/data.py data/raw data/processed", echo=True, pty=not WINDOWS)
+    ctx.run(f"uv run src/{PROJECT_NAME}/data.py data/raw data/processed", echo=True, pty=not WINDOWS)
 
 @task
 def train(ctx: Context) -> None:
     """Train model."""
-    ctx.run(f"uv run src/{PROJECT_NAME}/training/train.py", echo=True, pty=not WINDOWS)
+    ctx.run(f"uv run src/{PROJECT_NAME}/train.py", echo=True, pty=not WINDOWS)
 
 @task
 def test(ctx: Context) -> None:
@@ -55,7 +56,7 @@ def serve_docs(ctx: Context) -> None:
 def api(ctx: Context, port: int = 8000) -> None:
     """Start FastAPI server for inference."""
     ctx.run(
-        f"uv run uvicorn {PROJECT_NAME}.api.api:app --reload --host 0.0.0.0 --port {port}",
+        f"uv run uvicorn {PROJECT_NAME}.api:app --reload --host 0.0.0.0 --port {port}",
         echo=True,
         pty=not WINDOWS
     )
@@ -64,7 +65,7 @@ def api(ctx: Context, port: int = 8000) -> None:
 def ui(ctx: Context, port: int = 8501) -> None:
     """Start Streamlit UI."""
     ctx.run(
-        f"uv run streamlit run src/{PROJECT_NAME}/api/ui.py --server.port {port}",
+        f"uv run streamlit run src/{PROJECT_NAME}/ui.py --server.port {port}",
         echo=True,
         pty=not WINDOWS
     )

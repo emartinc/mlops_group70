@@ -51,7 +51,7 @@ def main(cfg: DictConfig):
         instantiate(cfg.callbacks.lr_monitor),
         instantiate(cfg.callbacks.progress_bar),
     ]
-    
+
     # Add early stopping if enabled
     if cfg.early_stopping_enabled:
         callbacks.append(instantiate(cfg.callbacks.early_stopping))
@@ -75,13 +75,6 @@ def main(cfg: DictConfig):
     if cfg.run_test:
         logger.info("Running test...")
         trainer.test(model, data_module, ckpt_path="best")
-
-    # Save final model
-    if cfg.save_final_model:
-        checkpoint_dir = cfg.callbacks.model_checkpoint.dirpath
-        final_model_path = Path(checkpoint_dir) / f"{cfg.experiment_name}_final.ckpt"
-        trainer.save_checkpoint(final_model_path)
-        logger.info(f"Final model saved to: {final_model_path}")
 
     logger.info("Training complete!")
 
