@@ -33,3 +33,16 @@
 * Ensure all functions and classes have docstrings.
 * Use Google style for docstrings.
 * Update this `AGENTS.md` file if any new tools or commands are added to the project.
+
+# Project Structure
+
+* **Data paths are relative to project root**: All data paths in configs use relative paths (e.g., `data/raw`).
+  The `MBTIDataModule` automatically resolves these relative to the project root by searching for `pyproject.toml`.
+  This makes the project portable across different environments.
+* **Automatic data preprocessing and caching**: The DataModule checks if processed data exists in
+  `data/processed/processed_mbti.csv`. If not found, it automatically downloads raw data, preprocesses it,
+  and saves the result. Subsequent runs load from cache for faster startup.
+* **Configuration uses Hydra instantiate**: All components (data, model, trainer, callbacks, logger) are instantiated
+  via Hydra's `instantiate()` function using `_target_` in YAML configs.
+* **Multi-task binary classification**: The model treats MBTI as 4 independent binary tasks (E/I, S/N, T/F, J/P)
+  instead of 16-class classification for better performance.

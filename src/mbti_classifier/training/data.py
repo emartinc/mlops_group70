@@ -1,4 +1,6 @@
+import argparse
 import logging
+import random
 import re
 from pathlib import Path
 from typing import Optional
@@ -16,25 +18,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def get_project_root() -> Path:
-    """
-    Get the project root directory by searching for pyproject.toml.
-    
-    Returns:
-        Path to the project root directory
-    """
-    current_path = Path(__file__).resolve()
-    
-    # Search upwards for pyproject.toml
-    for parent in [current_path] + list(current_path.parents):
-        if (parent / "pyproject.toml").exists():
-            return parent
-    
-    # Fallback: assume we're in src/mbti_classifier/training/
-    # and go up 3 levels to reach project root
-    return current_path.parent.parent.parent
-
-
 class MBTIDataset(Dataset):
     """PyTorch Dataset for MBTI personality types with tokenization.
 
@@ -45,18 +28,20 @@ class MBTIDataset(Dataset):
     - J/P (Judging vs Perceiving)
     """
 
-    def __init__(self, texts, binary_labels, tokenizer, max_length: int = 512):
+    def __init__(self, texts, binary_labels, tokenizer, max_length: int = 512, use_random_window: bool = False):
         """
         Args:
             texts: List or array of text posts
             binary_labels: Dict with keys ['E', 'S', 'T', 'J'], values are binary tensors (0 or 1)
             tokenizer: HuggingFace tokenizer instance
             max_length: Maximum sequence length for tokenization
+            use_random_window: If True, uses random windows for data augmentation (training only)
         """
         self.texts = texts
         self.binary_labels = binary_labels
         self.tokenizer = tokenizer
         self.max_length = max_length
+        self.use_random_window = use_random_window
 
     def __len__(self):
         return len(self.texts)
@@ -75,18 +60,89 @@ class MBTIDataset(Dataset):
             dtype=torch.float32,
         )
 
-        # Tokenize the text
-        encoding = self.tokenizer(
-            text,
-            max_length=self.max_length,
-            padding="max_length",
-            truncation=True,
-            return_tensors="pt",
-        )
+        # Tokenize with random window augmentation if enabled
+        if self.use_random_window:
+            # First tokenize without truncation to get full length
+            full_encoding = self.tokenizer(
+                text,
+                truncation=False,
+                return_tensors="pt",
+            )
+            
+            input_ids = full_encoding["input_ids"].squeeze(0)
+            total_length = len(input_ids)
+            
+            # If sequence is longer than max_length, take a random window
+            # BUT always keep [CLS] at start and [SEP] at end
+            if total_length > self.max_length:
+                # Extract [CLS] token (first token)
+                cls_token = input_ids[0:1]  # [CLS]
+                # Extract [SEP] token (last token)
+                sep_token = input_ids[-1:]  # [SEP]
+                
+                # Content tokens (excluding [CLS] and [SEP])
+                content_tokens = input_ids[1:-1]
+                content_length = len(content_tokens)
+                
+                # Available space for content (max_length - 2 for [CLS] and [SEP])
+                max_content_length = self.max_length - 2
+                
+                if content_length > max_content_length:
+                    # Random start position in content
+                    max_start = content_length - max_content_length
+                    start_idx = random.randint(0, max_start)
+                    end_idx = start_idx + max_content_length
+                    
+                    # Extract random window from content
+                    content_window = content_tokens[start_idx:end_idx]
+                else:
+                    # Content fits, use all of it
+                    content_window = content_tokens
+                
+                # Reconstruct: [CLS] + content_window + [SEP]
+                input_ids = torch.cat([cls_token, content_window, sep_token])
+                attention_mask = torch.ones(len(input_ids), dtype=torch.long)
+                
+                # Pad if necessary
+                current_length = len(input_ids)
+                if current_length < self.max_length:
+                    padding_length = self.max_length - current_length
+                    input_ids = torch.cat([
+                        input_ids,
+                        torch.full((padding_length,), self.tokenizer.pad_token_id, dtype=torch.long)
+                    ])
+                    attention_mask = torch.cat([
+                        attention_mask,
+                        torch.zeros(padding_length, dtype=torch.long)
+                    ])
+            else:
+                # If shorter than max_length, pad normally
+                attention_mask = torch.ones(total_length, dtype=torch.long)
+                padding_length = self.max_length - total_length
+                if padding_length > 0:
+                    input_ids = torch.cat([
+                        input_ids,
+                        torch.full((padding_length,), self.tokenizer.pad_token_id, dtype=torch.long)
+                    ])
+                    attention_mask = torch.cat([
+                        attention_mask,
+                        torch.zeros(padding_length, dtype=torch.long)
+                    ])
+        else:
+            # Standard tokenization with truncation from the beginning
+            encoding = self.tokenizer(
+                text,
+                max_length=self.max_length,
+                padding="max_length",
+                truncation=True,
+                return_tensors="pt",
+            )
+            input_ids = encoding["input_ids"].squeeze(0)
+            attention_mask = encoding["attention_mask"].squeeze(0)
 
         return {
-            "input_ids": encoding["input_ids"].squeeze(0),
-            "attention_mask": encoding["attention_mask"].squeeze(0),
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
             "labels": labels,  # [4] binary labels for E, S, T, J
         }
 
@@ -114,8 +170,8 @@ class MBTIDataModule(pl.LightningDataModule):
     ):
         """
         Args:
-            raw_data_path: Path to store raw downloaded data (relative to project root or absolute)
-            processed_data_path: Path to store processed data (relative to project root or absolute)
+            raw_data_path: Path to store raw downloaded data
+            processed_data_path: Path to store processed data
             batch_size: Batch size for DataLoaders (default 16 for transformer models)
             num_workers: Number of workers for DataLoaders
             test_size: Proportion of data for test set
@@ -126,21 +182,11 @@ class MBTIDataModule(pl.LightningDataModule):
             cache_dir: Optional directory to cache tokenizer and models
         """
         super().__init__()
-        
-        # Get project root
-        project_root = get_project_root()
-        
-        # Convert paths to absolute paths relative to project root if they are relative
-        raw_path = Path(raw_data_path)
-        if not raw_path.is_absolute():
-            raw_path = project_root / raw_path
-        self.raw_data_path = raw_path
-        
-        processed_path = Path(processed_data_path)
-        if not processed_path.is_absolute():
-            processed_path = project_root / processed_path
-        self.processed_data_path = processed_path
-        
+
+        # Convert paths to Path objects
+        self.raw_data_path = Path(raw_data_path)
+        self.processed_data_path = Path(processed_data_path)
+
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.test_size = test_size
@@ -224,11 +270,13 @@ class MBTIDataModule(pl.LightningDataModule):
                 "T": train_df["is_T"].values,
                 "J": train_df["is_J"].values,
             }
+            # Use random window augmentation for training
             self.train_dataset = MBTIDataset(
                 train_df["posts"].values,
                 train_binary_labels,
                 self.tokenizer,
                 self.max_length,
+                use_random_window=True,  # Enable random windows for training
             )
             if len(val_df) > 0:
                 val_binary_labels = {
@@ -237,11 +285,13 @@ class MBTIDataModule(pl.LightningDataModule):
                     "T": val_df["is_T"].values,
                     "J": val_df["is_J"].values,
                 }
+                # Use standard truncation for validation (consistent evaluation)
                 self.val_dataset = MBTIDataset(
                     val_df["posts"].values,
                     val_binary_labels,
                     self.tokenizer,
                     self.max_length,
+                    use_random_window=False,  # No augmentation for validation
                 )
 
         if stage == "test" or stage is None:
@@ -252,11 +302,13 @@ class MBTIDataModule(pl.LightningDataModule):
                     "T": test_df["is_T"].values,
                     "J": test_df["is_J"].values,
                 }
+                # Use standard truncation for testing (consistent evaluation)
                 self.test_dataset = MBTIDataset(
                     test_df["posts"].values,
                     test_binary_labels,
                     self.tokenizer,
                     self.max_length,
+                    use_random_window=False,  # No augmentation for testing
                 )
 
         logger.info(f"Data split: Train={len(train_df)}, Val={len(val_df)}, Test={len(test_df)}")
@@ -277,6 +329,7 @@ class MBTIDataModule(pl.LightningDataModule):
         """Create validation DataLoader."""
         if self.val_dataset is None:
             return None
+
         return DataLoader(
             self.val_dataset,
             batch_size=self.batch_size,
@@ -290,6 +343,7 @@ class MBTIDataModule(pl.LightningDataModule):
         """Create test DataLoader."""
         if self.test_dataset is None:
             return None
+        
         return DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,
@@ -331,29 +385,29 @@ class MBTIDataModule(pl.LightningDataModule):
     def _load_or_process_data(self):
         """
         Load processed data if available, otherwise download, process, and save it.
-        
+
         Returns:
             Processed DataFrame with cleaned text and binary labels
         """
         processed_file = self.processed_data_path / "processed_mbti.csv"
-        
+
         # Check if processed data exists
         if processed_file.exists():
             logger.info(f"Loading processed data from: {processed_file}")
             df = pd.read_csv(processed_file)
             logger.info(f"Loaded {len(df)} preprocessed rows")
             return df
-        
+
         # Download and process data
         logger.info("Processed data not found. Downloading and preprocessing...")
         self._ensure_data()
         df = self._load_and_clean_data()
-        
+
         # Save processed data
         self.processed_data_path.mkdir(parents=True, exist_ok=True)
         df.to_csv(processed_file, index=False)
         logger.info(f"Saved processed data to: {processed_file}")
-        
+
         return df
 
     def _load_and_clean_data(self):
@@ -427,55 +481,35 @@ class MBTIDataModule(pl.LightningDataModule):
         return text
 
 
+def main():
+    """Download and preprocess MBTI data."""
+    parser = argparse.ArgumentParser(description="Download and preprocess MBTI dataset")
+    parser.add_argument("raw_data_path", type=str, help="Path to store raw downloaded data")
+    parser.add_argument("processed_data_path", type=str, help="Path to store processed data")
+    args = parser.parse_args()
 
-"""
-Training script for MBTI personality classification using PyTorch Lightning and Hydra.
+    logger.info(f"Raw data path: {args.raw_data_path}")
+    logger.info(f"Processed data path: {args.processed_data_path}")
 
-Usage:
-    uv run python src/mbti_classifier/training/train.py
-    uv run python src/mbti_classifier/training/train.py model.learning_rate=1e-5
-    uv run python src/mbti_classifier/training/train.py trainer.max_epochs=10
-"""
+    # Create data module with specified paths
+    data_module = MBTIDataModule(
+        raw_data_path=args.raw_data_path,
+        processed_data_path=args.processed_data_path,
+    )
 
-import logging
-from pathlib import Path
+    # Download raw data if needed
+    logger.info("Ensuring raw data is downloaded...")
+    data_module._ensure_data()
 
-import hydra
-import pytorch_lightning as pl
-from hydra.utils import instantiate
-from omegaconf import DictConfig, OmegaConf
+    # Process and save data
+    logger.info("Processing data...")
+    df = data_module._load_or_process_data()
 
-logger = logging.getLogger(__name__)
-
-
-@hydra.main(version_base=None, config_path="../../../configs", config_name="dataset")
-def main(cfg: DictConfig):
-    """
-    Main training function.
-
-    Args:
-        cfg: Hydra configuration
-    """
-    # Print configuration
-    logger.info("=" * 80)
-    logger.info("Configuration:")
-    logger.info(OmegaConf.to_yaml(cfg))
-    logger.info("=" * 80)
-
-    data_module = instantiate(cfg.data)
-    data_module.prepare_data()
-
-    
+    logger.info("✓ Data preprocessing complete!")
+    logger.info(f"  - Raw data: {data_module.raw_data_path / 'mbti_1.csv'}")
+    logger.info(f"  - Processed data: {data_module.processed_data_path / 'processed_mbti.csv'}")
+    logger.info(f"  - Total rows: {len(df)}")
 
 
-# if __name__ == "__main__":
-#     main()
-
-
-# if __name__ == "__main__":
-#     # Download and preprocess and save processed data
-
-    
-#     data_module = MBTIDataModule()
-#     data_module.prepare_data()
-
+if __name__ == "__main__":
+    main()
