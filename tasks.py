@@ -49,3 +49,22 @@ def build_docs(ctx: Context) -> None:
 def serve_docs(ctx: Context) -> None:
     """Serve documentation."""
     ctx.run("uv run mkdocs serve --config-file docs/mkdocs.yaml", echo=True, pty=not WINDOWS)
+
+# API commands
+@task
+def api(ctx: Context, port: int = 8000) -> None:
+    """Start FastAPI server for inference."""
+    ctx.run(
+        f"uv run uvicorn {PROJECT_NAME}.api.api:app --reload --host 0.0.0.0 --port {port}",
+        echo=True,
+        pty=not WINDOWS
+    )
+
+@task
+def ui(ctx: Context, port: int = 8501) -> None:
+    """Start Streamlit UI."""
+    ctx.run(
+        f"uv run streamlit run src/{PROJECT_NAME}/api/ui.py --server.port {port}",
+        echo=True,
+        pty=not WINDOWS
+    )
