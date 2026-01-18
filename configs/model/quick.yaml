@@ -1,0 +1,6 @@
+# Quick training model configuration
+defaults:
+  - default
+
+learning_rate: 5e-5
+warmup_steps: 100

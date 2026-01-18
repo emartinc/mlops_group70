@@ -8,6 +8,9 @@
   * To run Python scripts, use `uv run <script-name>.py`.
   * To run other commands related to Python, prefix them with `uv run `, e.g., `uv run <command>`.
 * The project uses `pytest` for testing. To run tests, use `uv run pytest tests/`.
+  * Run only unit tests: `uv run pytest tests/unit/`
+  * Run only integration tests: `uv run pytest tests/integration/`
+  * Run without slow tests: `uv run pytest -m "not slow"`
 * The project uses `ruff` for linting and formatting:
     * To format code, use `uv run ruff format .`.
     * To lint code, use `uv run ruff check . --fix`.
@@ -15,6 +18,13 @@
     `tasks.py` file.
 * The project uses `pre-commit` for managing pre-commit hooks. To run all hooks on all files, use
     `uv run pre-commit run --all-files`. For more information, refer to the `.pre-commit-config.yaml` file.
+* The project uses **Hydra** for configuration management. All configs are in the `configs/` directory:
+    * Main config: `configs/train.yaml`
+    * Quick test: `configs/train_quick.yaml`
+    * CPU only: `configs/train_cpu.yaml`
+    * Production: `configs/train_production.yaml`
+    * See `configs/README.md` for detailed configuration guide
+* Training saves **only the best model** (no last.ckpt or other checkpoints).
 
 # Code style
 

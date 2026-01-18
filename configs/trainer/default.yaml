@@ -1,0 +1,24 @@
+# Trainer configuration
+_target_: pytorch_lightning.Trainer
+
+# Training duration
+max_epochs: 10
+
+# Hardware
+accelerator: auto
+devices: auto
+precision: 32
+
+# Training options
+gradient_clip_val: 1.0
+accumulate_grad_batches: 1
+deterministic: false
+
+# Logging
+log_every_n_steps: 10
+val_check_interval: 1.0
+
+# Features
+enable_checkpointing: true
+enable_progress_bar: true
+enable_model_summary: true

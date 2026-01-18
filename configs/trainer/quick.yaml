@@ -1,0 +1,6 @@
+# Quick trainer configuration (for testing)
+defaults:
+  - default
+
+max_epochs: 2
+log_every_n_steps: 5
