@@ -1,0 +1,17 @@
+# Model configuration
+_target_: mbti_classifier.training.model.MBTIClassifier
+
+# Base model
+model_name: distilbert-base-uncased
+
+# Optimizer settings
+learning_rate: 2e-5
+weight_decay: 0.01
+warmup_steps: 500
+
+# Model architecture
+dropout: 0.1
+
+# Freezing options
+freeze_encoder: false
+freeze_layers: 0

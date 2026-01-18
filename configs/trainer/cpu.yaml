@@ -1,0 +1,6 @@
+# CPU trainer configuration
+defaults:
+  - default
+
+accelerator: cpu
+devices: 1

@@ -1,35 +1,11 @@
-# CPU-only training configuration
-# Override main config with: python train.py --config-name=train_cpu
-
+# CPU training configuration
 defaults:
   - train
-  - _self_
+  - override trainer: cpu
+  - override logger: csv
 
+# Experiment name
 experiment_name: mbti_cpu
 
-data:
-  batch_size: 8
-  num_workers: 4
-  max_length: 256
-
-model:
-  learning_rate: 2e-5
-  warmup_steps: 200
-
-trainer:
-  max_epochs: 5
-  accelerator: cpu
-  devices: 1
-  precision: 32
-  gradient_clip_val: 1.0
-
-callbacks:
-  model_checkpoint:
-    save_top_k: 2
-  
-  early_stopping:
-    patience: 2
-
-early_stopping_enabled: true
-
-use_wandb: false  # Disable W&B for local testing
+# Disable wandb (optional)
+use_wandb: false
