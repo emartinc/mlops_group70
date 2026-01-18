@@ -1,14 +1,4 @@
-"""
-Training script for MBTI personality classification using PyTorch Lightning and Hydra.
-
-Usage:
-    uv run python src/mbti_classifier/training/train.py
-    uv run python src/mbti_classifier/training/train.py model.learning_rate=1e-5
-    uv run python src/mbti_classifier/training/train.py trainer.max_epochs=10
-"""
-
 import logging
-from pathlib import Path
 
 import hydra
 import pytorch_lightning as pl

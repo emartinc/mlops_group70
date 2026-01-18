@@ -181,3 +181,4 @@ data/
 checkpoints/
 logs/
 AGENTS.md 
+models/best.ckpt

@@ -31,8 +31,5 @@ early_stopping_enabled: true
 # Testing toggle
 run_test: true
 
-# Save final model (disabled - only best model is saved)
-save_final_model: false
-
 # Use wandb toggle
 use_wandb: true

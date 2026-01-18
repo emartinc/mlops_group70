@@ -1,10 +1,3 @@
-"""
-Streamlit web app for MBTI personality classification.
-
-Usage:
-    uv run streamlit run src/mbti_classifier/api/ui.py
-"""
-
 import plotly.graph_objects as go
 import requests
 import streamlit as st
@@ -53,14 +46,6 @@ def create_radar_plot(probabilities: dict) -> go.Figure:
         max(probabilities["S"], probabilities["N"]) * 100,
         max(probabilities["T"], probabilities["F"]) * 100,
         max(probabilities["J"], probabilities["P"]) * 100,
-    ]
-
-    # Determine which trait is dominant for coloring
-    labels = [
-        f"{'E' if probabilities['E'] > probabilities['I'] else 'I'} ({scores[0]:.1f}%)",
-        f"{'S' if probabilities['S'] > probabilities['N'] else 'N'} ({scores[1]:.1f}%)",
-        f"{'T' if probabilities['T'] > probabilities['F'] else 'F'} ({scores[2]:.1f}%)",
-        f"{'J' if probabilities['J'] > probabilities['P'] else 'P'} ({scores[3]:.1f}%)",
     ]
 
     # Create radar chart
@@ -137,7 +122,7 @@ def main():
         
         Please start the API server first:
         ```bash
-        uv run uvicorn mbti_classifier.api.api:app --reload --host 0.0.0.0 --port 8000
+        uv run uvicorn mbti_classifier.api:app --reload --host 0.0.0.0 --port 8000
         ```
         """
         )
@@ -210,9 +195,7 @@ def main():
             with st.spinner("🧠 Analyzing your personality..."):
                 try:
                     # Call API
-                    response = requests.post(
-                        f"{API_URL}/predict", json={"text": text_input}, timeout=30
-                    )
+                    response = requests.post(f"{API_URL}/predict", json={"text": text_input}, timeout=30)
 
                     if response.status_code == 200:
                         result = response.json()
@@ -236,7 +219,16 @@ def main():
                                 dimension = dim["dimension"]
 
                                 # Determine opposite label
-                                opposites = {"E": "I", "I": "E", "S": "N", "N": "S", "T": "F", "F": "T", "J": "P", "P": "J"}
+                                opposites = {
+                                    "E": "I",
+                                    "I": "E",
+                                    "S": "N",
+                                    "N": "S",
+                                    "T": "F",
+                                    "F": "T",
+                                    "J": "P",
+                                    "P": "J",
+                                }
                                 opposite = opposites.get(label, "")
 
                                 # Color code based on strength
@@ -247,7 +239,9 @@ def main():
                                 else:
                                     color = "🟠"
 
-                                st.markdown(f"{color} **{dimension}**: {label} ({percentage:.1f}%) vs {opposite} ({100-percentage:.1f}%)")
+                                st.markdown(
+                                    f"{color} **{dimension}**: {label} ({percentage:.1f}%) vs {opposite} ({100-percentage:.1f}%)"
+                                )
 
                         # Radar plot (full width below)
                         st.markdown("---")

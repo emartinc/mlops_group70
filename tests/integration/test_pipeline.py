@@ -77,7 +77,7 @@ class TestDataPipeline:
 
 
 @pytest.mark.slow
-@pytest.mark.integration  
+@pytest.mark.integration
 class TestAPIPipeline:
     """Integration tests for API."""
 

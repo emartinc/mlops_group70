@@ -2,6 +2,7 @@
 
 import sys
 from pathlib import Path
+
 import pytest
 import torch
 
@@ -49,4 +50,3 @@ def sample_texts():
 def sample_mbti_types():
     """Return sample MBTI types."""
     return ["INTJ", "ENFP", "ISTJ", "ENTP"]
-

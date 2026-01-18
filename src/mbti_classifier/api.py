@@ -2,7 +2,7 @@
 FastAPI server for MBTI personality classification inference.
 
 Usage:
-    uv run uvicorn mbti_classifier.api.api:app --reload --host 0.0.0.0 --port 8000
+    uv run uvicorn mbti_classifier.api:app --reload --host 0.0.0.0 --port 8000
 """
 
 import logging
@@ -14,9 +14,10 @@ from typing import Dict, List
 import torch
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from mbti_classifier.model import MBTIClassifier
 from pydantic import BaseModel, Field
 from transformers import AutoTokenizer
+
+from mbti_classifier.model import MBTIClassifier
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -61,7 +62,7 @@ def clean_text(text: str) -> str:
     return text
 
 
-def load_model_and_tokenizer(checkpoint_path: str = "models/checkpoints/best.ckpt"):
+def load_model_and_tokenizer(checkpoint_path: str = "models/best.ckpt"):
     """Load the trained model and tokenizer."""
     global model, tokenizer, device
 
