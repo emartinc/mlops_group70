@@ -10,7 +10,7 @@ from transformers import DistilBertTokenizer, Trainer, TrainingArguments
 
 # Add current directory to path
 sys.path.append(os.getcwd())
-from src.mbti_classifier.model import build_model
+from src.mbti_classifier.model import MBTIClassifier
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -66,7 +66,7 @@ def train_models(
         train_dataset = MBTITrainDataset(train_encodings, df_train[label_col].tolist())
         test_dataset = MBTITrainDataset(test_encodings, df_test[label_col].tolist())
 
-        model = build_model(num_labels=2)
+        model = MBTIClassifier(num_labels=2)
         
         training_args = TrainingArguments(
             output_dir=f"./models/checkpoints/{axis_name}",
