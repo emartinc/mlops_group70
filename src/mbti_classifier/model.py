@@ -1,38 +1,101 @@
 import logging
 import torch
-import torch.nn as nn
-from torchmetrics import Accuracy, F1Score, MetricCollection
-from transformers import AutoModel, get_linear_schedule_with_warmup
+import pytorch_lightning as pl
+from transformers import DistilBertForSequenceClassification
 
 logger = logging.getLogger(__name__)
 
+class MBTIClassifier(pl.LightningModule):
+    def __init__(
+        self, 
+        model_name: str = "distilbert-base-uncased", 
+        num_labels: int = 4, 
+        learning_rate: float = 2e-5,
+        weight_decay: float = 0.01
+    ):
+        super().__init__()
+        self.save_hyperparameters()
+        
+        logger.info(f"Loading architecture: {model_name}")
+        
+        # 1. Use the EXACT model you wanted
+        self.model = DistilBertForSequenceClassification.from_pretrained(
+            model_name, 
+            num_labels=num_labels
+        )
 
-### dummy model - testing 
-def build_model(num_labels: int = 2):
-    model_name = "distilbert-base-uncased"
-    logger.info(f"Loading architecture: {model_name}")
+    def forward(self, input_ids, attention_mask=None, labels=None):
+        # Pass inputs to the Hugging Face model
+        output = self.model(
+            input_ids=input_ids, 
+            attention_mask=attention_mask, 
+            labels=labels
+        )
+        
+        # CRITICAL FIX FOR TESTS:
+        # Hugging Face returns a complex object (SequenceClassifierOutput).
+        # Your tests expect a simple Tensor (logits).
+        # We extract .logits here so the rest of your code works.
+        return output.logits
 
-    # Usamos la clase de Hugging Face que ya tiene la "cabeza" de clasificación
-    model = DistilBertForSequenceClassification.from_pretrained(
-        model_name, 
-        num_labels=num_labels
-    )
-    
-    return model
+    def training_step(self, batch, batch_idx):
+        # We can implement a simple shared step here
+        input_ids = batch["input_ids"]
+        attention_mask = batch["attention_mask"]
+        labels = batch["labels"]
+
+        # Forward pass
+        logits = self(input_ids, attention_mask)
+        
+        # Calculate loss (BCEWithLogitsLoss is standard for multi-label)
+        # Note: We use manual loss calculation to match your labels shape
+        loss_fct = torch.nn.BCEWithLogitsLoss()
+        loss = loss_fct(logits, labels)
+
+        self.log("train_loss", loss)
+        return {"loss": loss, "logits": logits}
+
+    def validation_step(self, batch, batch_idx):
+        input_ids = batch["input_ids"]
+        attention_mask = batch["attention_mask"]
+        labels = batch["labels"]
+
+        logits = self(input_ids, attention_mask)
+        loss_fct = torch.nn.BCEWithLogitsLoss()
+        loss = loss_fct(logits, labels)
+
+        self.log("val_loss", loss)
+        return {"loss": loss, "logits": logits}
+
+    def predict_step(self, batch, batch_idx):
+        input_ids = batch["input_ids"]
+        attention_mask = batch["attention_mask"]
+        
+        logits = self(input_ids, attention_mask)
+        probs = torch.sigmoid(logits)
+        
+        return {"logits": logits, "probabilities": probs}
+
+    def configure_optimizers(self):
+        return torch.optim.AdamW(
+            self.parameters(), 
+            lr=self.hparams.learning_rate, 
+            weight_decay=self.hparams.weight_decay
+        )
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO) ### prueba 
+    logging.basicConfig(level=logging.INFO)
     
-    # 1. model
-    model = build_model()
+    # 1. Instantiate
+    model = MBTIClassifier(num_labels=4)
     
-    # 2. Cfalse dta to test the model - sanity checkkk 
-    # we simualate a sentence of 10 words 
-    dummy_input = torch.randint(0, 1000, (1, 10)) 
+    # 2. Dummy Data
+    dummy_input = torch.randint(0, 1000, (1, 10))
+    dummy_mask = torch.ones((1, 10))
     
-    # 3. a forward pass 
-    output = model(dummy_input)
+    # 3. Forward Pass
+    logits = model(dummy_input, dummy_mask)
     
-    print(f"correctly loaded model: {type(model).__name__}")
-    print(f"Output shape (Logits): {output.logits.shape}") 
-    # Debería salir [1, 2] -> 1 frase, 2 probabilidades (Clase 0 vs Clase 1)
+    print(f"Correctly loaded model: {type(model).__name__}")
+    print(f"Output shape (Logits): {logits.shape}") 
+    # Output: [1, 4]
