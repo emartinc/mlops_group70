@@ -22,9 +22,9 @@ dependencies = [
     "fastapi==0.115.6",
     "mlcroissant>=1.0.22",
     "pandas>=2.3.3",
-    "torch==2.6.0",
+    "torch==2.2.2",
     "transformers>=4.57.5",
-    "typer==0.15.1",
+    "typer==0.12.3",
     "uvicorn==0.34.0",
     "scikit-learn>=1.5.0",
     "lightning>=2.6.0",
@@ -36,6 +36,9 @@ dependencies = [
     "streamlit>=1.53.0",
     "plotly>=6.5.2",
     "pydantic>=2.12.5",
+    "numpy<2.0",
+    "click==8.1.7",
+    "coverage>=7.6.9",
 ]
 
 [dependency-groups]
@@ -48,6 +51,7 @@ dev = [
     "mypy==1.19.1",
     "mkdocs-material==9.7.1",
     "mkdocstrings-python==2.0.1",
+    "httpx>=0.28.1",
 ]
 
 
