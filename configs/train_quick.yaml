@@ -1,0 +1,19 @@
+# Quick training configuration for testing
+defaults:
+  - train
+  - override data: quick
+  - override model: quick
+  - override trainer: quick
+  - override logger: csv
+
+# Experiment name
+experiment_name: mbti_quick_test
+
+# Disable wandb for quick tests
+use_wandb: false
+
+# Disable early stopping for quick tests
+early_stopping_enabled: false
+
+# Run test at the end
+run_test: true

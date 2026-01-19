@@ -11,4 +11,4 @@ COPY LICENSE LICENSE
 
 RUN uv sync --frozen
 
-ENTRYPOINT ["uv", "run", "src/src/train.py"]
+ENTRYPOINT ["uv", "run", "uvicorn", "src.src.api:app", "--host", "0.0.0.0", "--port", "8000"]

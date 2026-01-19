@@ -178,3 +178,7 @@ cython_debug/
 
 uv.lock
 data/
+checkpoints/
+logs/
+AGENTS.md 
+models/best.ckpt
