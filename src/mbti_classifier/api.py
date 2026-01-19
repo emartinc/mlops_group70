@@ -59,14 +59,14 @@ def load_model_and_tokenizer(checkpoint_path: str = "models/best.ckpt"):
     if not checkpoint_path.exists():
         logger.warning(f"⚠️ Checkpoint not found at {checkpoint_path}. Using UNTRAINED model.")
         # FIX 1: Set num_labels=4 so logic doesn't crash on index 2/3
-        model = MBTIClassifier(num_labels=4) 
+        model = MBTIClassifier(num_labels=4)
     else:
         logger.info(f"Loading model from {checkpoint_path}")
         model = MBTIClassifier.load_from_checkpoint(checkpoint_path)
         # Use the name saved in hparams if available
         if hasattr(model.hparams, "model_name"):
             model_name = model.hparams.model_name
-    
+
     # Common setup
     model.eval()
     model.to(device)
@@ -123,7 +123,7 @@ class PredictionResponse(BaseModel):
     dimensions: List[DimensionScore]
     probabilities: Dict[str, float]
     # Added input_text to response model if your test expects it (it usually helps debugging)
-    input_text: Optional[str] = None 
+    input_text: Optional[str] = None
 
 
 @app.get("/")
@@ -132,7 +132,7 @@ async def root():
     # FIX 3: Added status fields here so 'test_root_endpoint' passes
     return {
         "message": "MBTI Personality Classifier API",
-        "status": "ok", 
+        "status": "ok",
         "model_loaded": model is not None,
         "tokenizer_loaded": tokenizer is not None,
         "device": str(device) if device else "none",
@@ -177,7 +177,7 @@ async def predict(request: PredictionRequest):
             # Handle both raw Tensor and Hugging Face Output object
             outputs = model(input_ids, attention_mask)
             logits = outputs.logits if hasattr(outputs, "logits") else outputs
-            
+
             probs = torch.sigmoid(logits).squeeze(0).cpu().numpy()  # [4]
             preds = (probs > 0.5).astype(int)  # [4]
 
@@ -202,8 +202,8 @@ async def predict(request: PredictionRequest):
         }
 
         return PredictionResponse(
-            mbti_type=mbti_type, 
-            dimensions=dimensions, 
+            mbti_type=mbti_type,
+            dimensions=dimensions,
             probabilities=probabilities,
             input_text=text
         )

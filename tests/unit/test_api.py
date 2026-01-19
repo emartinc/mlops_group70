@@ -56,11 +56,11 @@ class TestAPI:
         assert data["status"] == "ok"
 
     # 🚀 KEY FIX: Patch BOTH model AND tokenizer!
-    @patch("mbti_classifier.api.tokenizer") 
-    @patch("mbti_classifier.api.model")     
+    @patch("mbti_classifier.api.tokenizer")
+    @patch("mbti_classifier.api.model")
     def test_predict_endpoint(self, mock_model, mock_tokenizer):
         """Test the Prediction Endpoint with mocked globals."""
-        
+
         # 1. Setup Fake Model Output
         mock_output = MagicMock()
         # Logits for [E, S, T, J] all negative -> [0,0,0,0] after sigmoid -> I, N, F, P
@@ -84,7 +84,7 @@ class TestAPI:
 
         # 4. Verify Success
         assert response.status_code == 200, f"Failed with: {response.text}"
-        
+
         data = response.json()
         assert data["mbti_type"] == "INFP"  # Matches our negative logits
         assert "dimensions" in data

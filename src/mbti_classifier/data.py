@@ -88,11 +88,11 @@ class MBTIDataset(Dataset):
                     start = random.randint(0, content_len - max_content)
                     content = input_ids[1:-1][start : start + max_content]
                     input_ids = torch.cat([input_ids[0:1], content, input_ids[-1:]])
-            
+
             if len(input_ids) < self.max_length:
                 pad_len = self.max_length - len(input_ids)
                 input_ids = torch.cat([input_ids, torch.full((pad_len,), self.tokenizer.pad_token_id)])
-            
+
             attention_mask = (input_ids != self.tokenizer.pad_token_id).long()
         else:
             encoding = self.tokenizer(text, max_length=self.max_length, padding="max_length", truncation=True, return_tensors="pt")
@@ -115,15 +115,15 @@ class MBTIDataModule(pl.LightningDataModule):
         self.model_name = model_name
         self.max_length = max_length
         self.cache_dir = cache_dir
-        
+
         self.tokenizer = None
         self.train_dataset = None
         self.val_dataset = None
         self.test_dataset = None
-        
+
         # FIX: Needed for tests
         self.num_classes = 16
-        self.type_to_idx = {} 
+        self.type_to_idx = {}
 
     @staticmethod
     def _clean_text(text):
@@ -136,11 +136,11 @@ class MBTIDataModule(pl.LightningDataModule):
     def setup(self, stage: Optional[str] = None):
         if self.tokenizer is None:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, cache_dir=self.cache_dir)
-        
+
         csv_path = self.raw_data_path / "mbti_1.csv"
         if not csv_path.exists():
             download_dataset(self.raw_data_path)
-            
+
         df = load_and_process_df(csv_path)
 
         # FIX: Populate type_to_idx for tests
