@@ -34,25 +34,25 @@ def train_models(
     processed_data_path: Path = Path("/Users/estelamartincebrian/Desktop/mlops_group70/data/processed"),
     output_model_dir: Path = Path("models"),
     epochs: int = 1,
-    batch_size: int = 8 
+    batch_size: int = 8
 ):
     logger.info("Starting Multi-Axis Training Pipeline...")
 
     # 1. Load Data
     train_path = processed_data_path / "train.csv"
     test_path = processed_data_path / "test.csv"
-    
+
     if not train_path.exists():
         raise FileNotFoundError(f"File not found: {train_path}. Run data.py first.")
-        
+
     df_train = pd.read_csv(train_path)
-    df_test = pd.read_csv(test_path).sample(100, random_state=42) 
+    df_test = pd.read_csv(test_path).sample(100, random_state=42)
 
     # 2. Tokenization
     model_name = "distilbert-base-uncased"
     logger.info(f"Loading Tokenizer: {model_name}")
     tokenizer = DistilBertTokenizer.from_pretrained(model_name)
-    
+
     logger.info("Tokenizing text...")
     train_encodings = tokenizer(df_train['posts'].tolist(), truncation=True, padding=True, max_length=128)
     test_encodings = tokenizer(df_test['posts'].tolist(), truncation=True, padding=True, max_length=128)
@@ -62,12 +62,12 @@ def train_models(
 
     for axis_name, label_col in axes:
         logger.info(f"\n=== Training Specialist Model for Axis: {axis_name} ===")
-        
+
         train_dataset = MBTITrainDataset(train_encodings, df_train[label_col].tolist())
         test_dataset = MBTITrainDataset(test_encodings, df_test[label_col].tolist())
 
         model = MBTIClassifier(num_labels=2)
-        
+
         training_args = TrainingArguments(
             output_dir=f"./models/checkpoints/{axis_name}",
             num_train_epochs=epochs,
@@ -75,7 +75,7 @@ def train_models(
             eval_strategy="epoch",  # <--- CHANGED HERE
             save_strategy="no",
             logging_steps=50,
-            use_mps_device=torch.backends.mps.is_available() 
+            use_mps_device=torch.backends.mps.is_available()
         )
 
         trainer = Trainer(

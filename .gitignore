@@ -180,5 +180,5 @@ uv.lock
 data/
 checkpoints/
 logs/
-AGENTS.md 
+AGENTS.md
 models/best.ckpt
