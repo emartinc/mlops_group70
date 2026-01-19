@@ -1,0 +1,33 @@
+name: Model Registry Trigger
+
+on:
+  push:
+    paths:
+      - 'models/**'        # Triggers if you push a new model file
+      - 'model.dvc'        # Triggers if you update the model in DVC
+
+jobs:
+  evaluate_model:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev --frozen
+
+      - name: Test Model Inference
+        # This checks if the new model can actually make predictions without crashing
+        run: |
+          uv run coverage run -m pytest tests/
