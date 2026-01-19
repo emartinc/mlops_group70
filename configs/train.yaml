@@ -1,0 +1,35 @@
+# Main training configuration
+defaults:
+  - data: default
+  - model: default
+  - trainer: default
+  - callbacks: default
+  - logger: wandb
+  - _self_
+
+# Experiment name
+experiment_name: mbti_distilbert
+
+# Random seed for reproducibility
+seed: 42
+
+# Override data random seed
+data:
+  random_seed: ${seed}
+
+# Override model name consistency
+model:
+  model_name: distilbert-base-uncased
+
+# Override logger name
+logger:
+  name: ${experiment_name}
+
+# Early stopping toggle
+early_stopping_enabled: true
+
+# Testing toggle
+run_test: true
+
+# Use wandb toggle
+use_wandb: true

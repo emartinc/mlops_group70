@@ -1,0 +1,22 @@
+# Production training configuration
+defaults:
+  - train
+
+# Experiment name
+experiment_name: mbti_production
+
+# Extended training
+trainer:
+  max_epochs: 20
+
+# More patient early stopping
+callbacks:
+  early_stopping:
+    patience: 5
+    min_delta: 0.0001
+
+# Enable wandb
+use_wandb: true
+
+# Run comprehensive test
+run_test: true

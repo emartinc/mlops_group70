@@ -1,0 +1,11 @@
+# CPU training configuration
+defaults:
+  - train
+  - override trainer: cpu
+  - override logger: csv
+
+# Experiment name
+experiment_name: mbti_cpu
+
+# Disable wandb (optional)
+use_wandb: false
