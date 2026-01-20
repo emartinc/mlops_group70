@@ -177,8 +177,9 @@ cython_debug/
 #.idea/
 
 uv.lock
-data/
 checkpoints/
 logs/
 AGENTS.md 
 models/best.ckpt
+processed_mbti.csv
+mbti_1.csv

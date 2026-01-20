@@ -1,0 +1,24 @@
+# Default data module configuration
+_target_: mbti_classifier.data.MBTIDataModule
+
+# Data paths (relative to project root)
+raw_data_path: data/raw
+processed_data_path: data/processed
+
+# DataLoader settings
+batch_size: 16
+num_workers: 4
+
+# Data split ratios
+test_size: 0.15
+val_size: 0.15
+
+# Random seed (will be overridden by main config)
+random_seed: 42
+
+# Model and tokenization settings
+model_name: distilbert-base-uncased
+max_length: 512
+
+# Optional cache directory for tokenizer and models
+cache_dir: null
