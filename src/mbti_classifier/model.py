@@ -264,7 +264,7 @@ class MBTIClassifier(pl.LightningModule):
         self.log("test/loss", outputs["loss"], on_step=False, on_epoch=True, sync_dist=True)
         return outputs["loss"]
 
-    def on_test_epoch_end(self):
+    def on_test_epoch_end(self): #test
         """Log test metrics at epoch end."""
         all_metrics = {}
         for task_name, metric_collection in self.test_metrics.items():
