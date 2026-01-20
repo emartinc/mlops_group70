@@ -1,97 +1,73 @@
 import logging
-import sys
-import os
-from pathlib import Path
-import pandas as pd
-import torch
-import typer
-from torch.utils.data import Dataset
-from transformers import DistilBertTokenizer, Trainer, TrainingArguments
 
-# Add current directory to path
-sys.path.append(os.getcwd())
-from src.mbti_classifier.model import build_model
+import hydra
+import pytorch_lightning as pl
+from hydra.utils import instantiate
+from omegaconf import DictConfig, OmegaConf
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class MBTITrainDataset(Dataset):
-    def __init__(self, encodings, labels):
-        self.encodings = encodings
-        self.labels = labels
+@hydra.main(version_base=None, config_path="../../configs", config_name="train")
+def main(cfg: DictConfig):
+    """
+    Main training function.
 
-    def __getitem__(self, idx):
-        item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
-        item['labels'] = torch.tensor(self.labels[idx]).long()
-        return item
+    Args:
+        cfg: Hydra configuration
+    """
+    # Print configuration
+    logger.info("=" * 80)
+    logger.info("Configuration:")
+    logger.info(OmegaConf.to_yaml(cfg))
+    logger.info("=" * 80)
 
-    def __len__(self):
-        return len(self.labels)
+    # Set random seed for reproducibility
+    pl.seed_everything(cfg.seed, workers=True)
 
-def train_models(
-    processed_data_path: Path = Path("/Users/estelamartincebrian/Desktop/mlops_group70/data/processed"),
-    output_model_dir: Path = Path("models"),
-    epochs: int = 1,
-    batch_size: int = 8 
-):
-    logger.info("Starting Multi-Axis Training Pipeline...")
+    # Initialize DataModule
+    logger.info("Initializing DataModule...")
+    data_module = instantiate(cfg.data)
+    data_module.prepare_data()
+    data_module.setup(stage="fit")
 
-    # 1. Load Data
-    train_path = processed_data_path / "train.csv"
-    test_path = processed_data_path / "test.csv"
-    
-    if not train_path.exists():
-        raise FileNotFoundError(f"File not found: {train_path}. Run data.py first.")
-        
-    df_train = pd.read_csv(train_path)
-    df_test = pd.read_csv(test_path).sample(100, random_state=42) 
+    # Initialize Model
+    logger.info("Initializing Model...")
+    model = instantiate(cfg.model)
 
-    # 2. Tokenization
-    model_name = "distilbert-base-uncased"
-    logger.info(f"Loading Tokenizer: {model_name}")
-    tokenizer = DistilBertTokenizer.from_pretrained(model_name)
-    
-    logger.info("Tokenizing text...")
-    train_encodings = tokenizer(df_train['posts'].tolist(), truncation=True, padding=True, max_length=128)
-    test_encodings = tokenizer(df_test['posts'].tolist(), truncation=True, padding=True, max_length=128)
+    # Setup callbacks
+    callbacks = [
+        instantiate(cfg.callbacks.model_checkpoint),
+        instantiate(cfg.callbacks.lr_monitor),
+        instantiate(cfg.callbacks.progress_bar),
+    ]
 
-    # 3. Training Loop
-    axes = [('IE', 'is_E'), ('NS', 'is_S'), ('TF', 'is_T'), ('JP', 'is_J')]
+    # Add early stopping if enabled
+    if cfg.early_stopping_enabled:
+        callbacks.append(instantiate(cfg.callbacks.early_stopping))
 
-    for axis_name, label_col in axes:
-        logger.info(f"\n=== Training Specialist Model for Axis: {axis_name} ===")
-        
-        train_dataset = MBTITrainDataset(train_encodings, df_train[label_col].tolist())
-        test_dataset = MBTITrainDataset(test_encodings, df_test[label_col].tolist())
+    # Setup logger
+    wandb_logger = None
+    if cfg.use_wandb:
+        wandb_logger = instantiate(cfg.logger)
+        # Log hyperparameters
+        wandb_logger.experiment.config.update(OmegaConf.to_container(cfg, resolve=True))
 
-        model = build_model(num_labels=2)
-        
-        training_args = TrainingArguments(
-            output_dir=f"./models/checkpoints/{axis_name}",
-            num_train_epochs=epochs,
-            per_device_train_batch_size=batch_size,
-            eval_strategy="epoch",  # <--- CHANGED HERE
-            save_strategy="no",
-            logging_steps=50,
-            use_mps_device=torch.backends.mps.is_available() 
-        )
+    # Initialize Trainer
+    logger.info("Initializing Trainer...")
+    trainer = instantiate(cfg.trainer, callbacks=callbacks, logger=wandb_logger)
 
-        trainer = Trainer(
-            model=model,
-            args=training_args,
-            train_dataset=train_dataset,
-            eval_dataset=test_dataset,
-        )
+    # Train
+    logger.info("Starting training...")
+    trainer.fit(model, data_module)
 
-        trainer.train()
+    # Test
+    if cfg.run_test:
+        logger.info("Running test...")
+        trainer.test(model, data_module, ckpt_path="best")
 
-        final_path = output_model_dir / axis_name
-        model.save_pretrained(final_path)
-        tokenizer.save_pretrained(final_path)
-        logger.info(f"Model {axis_name} saved at: {final_path}")
+    logger.info("Training complete!")
 
 
 if __name__ == "__main__":
-    typer.run(train_models)
+    main()
