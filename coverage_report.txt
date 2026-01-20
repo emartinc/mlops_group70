@@ -1,0 +1,47 @@
+(src) (base) estelamartincebrian@Estelas-MacBook-Pro mlops_group70 % uv run coverage run --omit="src/mbti_classifier/ui.py,src/mbti_classifier/train.py" -m pytest tests/
+uv run coverage report -m
+========================================================================== test session starts ==========================================================================
+platform darwin -- Python 3.12.12, pytest-8.3.4, pluggy-1.6.0 -- /Users/estelamartincebrian/Desktop/mlops_group70/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/estelamartincebrian/Desktop/mlops_group70
+configfile: pyproject.toml
+plugins: anyio-4.12.1, hydra-core-1.3.2
+collected 27 items
+
+tests/integration/test_pipeline.py::TestTrainingPipeline::test_quick_training_run SKIPPED (Integration test - run manually with: pytest -m integration)           [  3%]
+tests/integration/test_pipeline.py::TestTrainingPipeline::test_checkpoint_loading SKIPPED (Best checkpoint not found)                                             [  7%]
+tests/integration/test_pipeline.py::TestDataPipeline::test_full_data_pipeline PASSED                                                                              [ 11%]
+tests/integration/test_pipeline.py::TestAPIPipeline::test_api_prediction_pipeline SKIPPED (Requires running API server - test manually)                           [ 14%]
+tests/unit/test_api.py::TestAPI::test_health_endpoint_structure PASSED                                                                                            [ 18%]
+tests/unit/test_api.py::TestAPI::test_prediction_request_validation PASSED                                                                                        [ 22%]
+tests/unit/test_api.py::TestAPI::test_prediction_response_structure PASSED                                                                                        [ 25%]
+tests/unit/test_api.py::TestAPI::test_text_cleaning PASSED                                                                                                        [ 29%]
+tests/unit/test_api.py::TestAPI::test_root_endpoint PASSED                                                                                                        [ 33%]
+tests/unit/test_api.py::TestAPI::test_predict_endpoint PASSED                                                                                                     [ 37%]
+tests/unit/test_data_module.py::TestMBTIDataset::test_dataset_length PASSED                                                                                       [ 40%]
+tests/unit/test_data_module.py::TestMBTIDataset::test_dataset_getitem PASSED                                                                                      [ 44%]
+tests/unit/test_data_module.py::TestMBTIDataset::test_random_window_augmentation PASSED                                                                           [ 48%]
+tests/unit/test_data_module.py::TestMBTIDataModule::test_datamodule_initialization PASSED                                                                         [ 51%]
+tests/unit/test_data_module.py::TestMBTIDataModule::test_datamodule_setup PASSED                                                                                  [ 55%]
+tests/unit/test_data_module.py::TestMBTIDataModule::test_train_dataloader PASSED                                                                                  [ 59%]
+tests/unit/test_data_module.py::TestMBTIDataModule::test_val_dataloader PASSED                                                                                    [ 62%]
+tests/unit/test_data_module.py::TestMBTIDataModule::test_test_dataloader PASSED                                                                                   [ 66%]
+tests/unit/test_data_module.py::TestMBTIDataModule::test_text_cleaning PASSED                                                                                     [ 70%]
+tests/unit/test_model.py::TestMBTIClassifier::test_model_initialization PASSED                                                                                    [ 74%]
+tests/unit/test_model.py::TestMBTIClassifier::test_model_forward PASSED                                                                                           [ 77%]
+tests/unit/test_model.py::TestMBTIClassifier::test_shared_step PASSED                                                                                             [ 81%]
+tests/unit/test_model.py::TestMBTIClassifier::test_binary_to_mbti SKIPPED (Model does not have _binary_to_mbti method)                                            [ 85%]
+tests/unit/test_model.py::TestMBTIClassifier::test_predict_step PASSED                                                                                            [ 88%]
+tests/unit/test_model.py::TestMBTIClassifier::test_parameter_count PASSED                                                                                         [ 92%]
+tests/unit/test_model.py::TestMBTIClassifier::test_freeze_encoder SKIPPED (MBTIClassifier does not accept 'freeze_encoder' argument)                              [ 96%]
+tests/unit/test_model.py::TestMBTIClassifier::test_configure_optimizers PASSED                                                                                    [100%]
+
+============================================================== 22 passed, 5 skipped, 2 warnings in 57.64s ===============================================================
+Name                              Stmts   Miss  Cover   Missing
+---------------------------------------------------------------
+src/mbti_classifier/__init__.py       1      0   100%
+src/mbti_classifier/api.py           99     31    69%   38, 52-79, 85-91, 150, 161, 167, 211-215
+src/mbti_classifier/data.py         133     24    82%   29-42, 93-94, 142, 168-174
+src/mbti_classifier/model.py         40      8    80%   59-68
+---------------------------------------------------------------
+TOTAL                               273     63    77%

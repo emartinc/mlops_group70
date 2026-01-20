@@ -217,7 +217,7 @@ uv run invoke ui --port 8502
 
 ## 🎯 Tips for Best Results
 
-1. **Text Length**: 
+1. **Text Length**:
    - Minimum: 50 characters
    - Recommended: 100-200 words
    - More text = better accuracy
@@ -289,10 +289,10 @@ All required dependencies are already installed:
 2. **Open browser** to `http://localhost:8501`
 3. **Enter sample text**:
    ```
-   I love spending time alone with my thoughts. I enjoy analyzing 
-   complex problems and coming up with creative solutions. I prefer 
-   to plan things ahead rather than being spontaneous. When making 
-   decisions, I rely more on logic than emotions. I find deep 
+   I love spending time alone with my thoughts. I enjoy analyzing
+   complex problems and coming up with creative solutions. I prefer
+   to plan things ahead rather than being spontaneous. When making
+   decisions, I rely more on logic than emotions. I find deep
    conversations more interesting than small talk.
    ```
 4. **Click "Predict"**
@@ -315,7 +315,7 @@ Potential enhancements:
 
 ---
 
-**Created**: January 17, 2026  
-**Status**: ✅ Fully Functional  
-**Model**: DistilBERT-based MBTI Classifier  
-**Framework**: FastAPI + Streamlit  
+**Created**: January 17, 2026
+**Status**: ✅ Fully Functional
+**Model**: DistilBERT-based MBTI Classifier
+**Framework**: FastAPI + Streamlit

@@ -119,7 +119,7 @@ def main():
         st.error(
             """
         ⚠️ **API Server is not running!**
-        
+
         Please start the API server first:
         ```bash
         uv run uvicorn mbti_classifier.api:app --reload --host 0.0.0.0 --port 8000
@@ -133,9 +133,9 @@ def main():
         st.header("About MBTI")
         st.markdown(
             """
-        **Myers-Briggs Type Indicator (MBTI)** is a personality assessment 
+        **Myers-Briggs Type Indicator (MBTI)** is a personality assessment
         that categorizes people into 16 personality types based on four dimensions:
-        
+
         - **E/I**: Extraversion vs Introversion
         - **S/N**: Sensing vs Intuition
         - **T/F**: Thinking vs Feeling
@@ -295,7 +295,7 @@ def main():
     st.markdown("---")
     st.caption(
         """
-    **Note**: This is an AI-based prediction and should be used for entertainment and self-reflection purposes. 
+    **Note**: This is an AI-based prediction and should be used for entertainment and self-reflection purposes.
     For a comprehensive personality assessment, consider taking an official MBTI test.
     """
     )
