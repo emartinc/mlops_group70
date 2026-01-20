@@ -123,7 +123,7 @@ will check the repositories and the code to verify your answers.
 >
 > Answer:
 
---- question 1 fill here ---
+70
 
 ### Question 2
 > **Enter the study number for each member in the group**
@@ -134,7 +134,7 @@ will check the repositories and the code to verify your answers.
 >
 > Answer:
 
---- question 2 fill here ---
+s250221,
 
 ### Question 3
 > **Did you end up using any open-source frameworks/packages not covered in the course during your project? If so**
@@ -233,7 +233,9 @@ will check the repositories and the code to verify your answers.
 >
 > Answer:
 
---- question 8 fill here ---
+The total code coverage of our code is 77%, which includes the core logic of our API and model modules. We achieved this by implementing unit tests with pytest and pytest-cov, specifically targeting the mbti_classifier source code while omitting peripheral files like the UI and training scripts to ensure the metrics reflect the most critical inference components. Additionally, we recognize the importance of testing edge cases and performing integration tests to complement unit tests, as these help ensure robustness and reliability across different scenarios and system interactions.
+
+Even if our code reached 100% coverage, we would not trust it to be entirely error-free. Code coverage only measures which lines of code are executed during a test suite; it does not guarantee that the logic within those lines is correct or that the code can handle all possible edge cases and unexpected inputs. For example, an edge case like handling unexpected null values in a rarely used API endpoint might not be covered by unit tests. Similarly, integration issues such as mismatched data formats between two microservices could go unnoticed. High coverage ensures that the "paths" are tested, but it does not account for integration issues with external APIs or hardware-specific bugs that unit tests cannot simulate. Therefore, while 77% provides a strong safety net, it remains just one part of a broader quality assurance strategy.
 
 ### Question 9
 
@@ -248,7 +250,9 @@ will check the repositories and the code to verify your answers.
 >
 > Answer:
 
---- question 9 fill here ---
+We fully integrated branches and Pull Requests (PRs) into our workflow to manage concurrent development. Each team member maintained their own dedicated branch, which allowed us to work on features independently without interfering with each other's code. During merges, we resolved conflicts by reviewing the changes together as a team, ensuring that the final code reflected the best solution and maintained consistency across the project.
+
+We used the main branch exclusively as our stable, clean version. To merge our changes, we opened Pull Requests, which served as an important quality control gate. We configured GitHub Actions to automatically trigger our Continuous Integration (CI) pipeline on these PRs, which included unit tests to verify functionality, linting to ensure code style consistency, and security checks to identify vulnerabilities. This setup guaranteed that all code met our quality standards before any merge could occur. This workflow not only prevented broken code from reaching the main branch but also facilitated code reviews, allowing us to discuss implementation details before finalizing changes.
 
 ### Question 10
 
@@ -280,7 +284,13 @@ will check the repositories and the code to verify your answers.
 >
 > Answer:
 
---- question 11 fill here ---
+Our Continuous Integration (CI) architecture is built on GitHub Actions and is organized into three distinct workflows to balance code quality, platform reliability, and resource efficiency. We chose GitHub Actions for its seamless integration with our repository, extensive community support, and ability to configure workflows with a build matrix and caching, which optimizes resource usage and ensures compatibility across multiple environments.
+
+First, our core testing pipeline, `tests.yml`, is designed to ensure robustness across all development environments. We use a build matrix approach that automatically runs our full test on Ubuntu-latest, macOS-latest, and Windows-latest, while simultaneously checking compatibility against both Python 3.11 and 3.12. This ensures that our package works correctly regardless of a developer's local operating system. To optimize this process, we integrated the astral-sh/setup-uv action with dependency caching enabled. This setup reduces build times by caching the virtual environment and packages between runs, ensuring rapid feedback loops for developers without waiting for repeated downloads.
+
+Secondly, we enforce strict code quality standards through pre-commit hooks. Rather than relying only on server-side checks that might fail 10 minutes after a push, we integrated hooks like trailing-whitespace and end-of-file-fixer. These run locally before every commit, automatically correcting formatting errors and preventing "nitpick" style issues from cluttering our project history or code reviews.
+
+Finally, we implemented strategic event triggers to optimize computational resources. Training models and running full evaluations can be expensive. Therefore, we separated these tasks from our main CI loop. We created dedicated workflows, on_data_change.yml and on_model_change.yml, which use path filters to only trigger when changes are detected in the data/ or models/ directories respectively. This prevents redundant retraining or code fixes, saving both time and GitHub Actions compute minutes.
 
 ## Running code and tracking experiments
 
