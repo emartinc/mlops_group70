@@ -10,6 +10,78 @@ from transformers import AutoModel, get_linear_schedule_with_warmup
 logger = logging.getLogger(__name__)
 
 
+class MBTIModel(nn.Module):
+    """
+    Core MBTI classification model architecture.
+    
+    Multi-task binary classification model with shared encoder and task-specific heads
+    for predicting MBTI dimensions: E/I, S/N, T/F, J/P.
+    """
+
+    def __init__(
+        self,
+        model_name: str = "distilbert-base-uncased",
+        dropout: float = 0.1,
+    ):
+        """
+        Args:
+            model_name: HuggingFace model name to load
+            dropout: Dropout probability for classification head
+        """
+        super().__init__()
+        
+        # Load pretrained transformer model
+        logger.info(f"Loading pretrained model: {model_name}")
+        self.encoder = AutoModel.from_pretrained(model_name)
+        hidden_size = self.encoder.config.hidden_size
+
+        # Multi-task classification heads (4 binary classifiers)
+        # Shared representation
+        self.shared_layers = nn.Sequential(
+            nn.Dropout(dropout),
+            nn.Linear(hidden_size, hidden_size),
+            nn.GELU(),
+            nn.Dropout(dropout),
+        )
+
+        # Task-specific heads for E/I, S/N, T/F, J/P
+        self.ei_head = nn.Linear(hidden_size, 1)  # E vs I
+        self.sn_head = nn.Linear(hidden_size, 1)  # S vs N
+        self.tf_head = nn.Linear(hidden_size, 1)  # T vs F
+        self.jp_head = nn.Linear(hidden_size, 1)  # J vs P
+
+    def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass through the model.
+
+        Args:
+            input_ids: Input token IDs [batch_size, seq_length]
+            attention_mask: Attention mask [batch_size, seq_length]
+
+        Returns:
+            Logits [batch_size, 4] for E/I, S/N, T/F, J/P tasks
+        """
+        # Get encoder outputs
+        outputs = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
+
+        # Use [CLS] token representation (first token)
+        cls_output = outputs.last_hidden_state[:, 0, :]
+
+        # Pass through shared layers
+        shared_repr = self.shared_layers(cls_output)
+
+        # Task-specific predictions
+        ei_logits = self.ei_head(shared_repr)  # [batch_size, 1]
+        sn_logits = self.sn_head(shared_repr)  # [batch_size, 1]
+        tf_logits = self.tf_head(shared_repr)  # [batch_size, 1]
+        jp_logits = self.jp_head(shared_repr)  # [batch_size, 1]
+
+        # Concatenate all task logits
+        logits = torch.cat([ei_logits, sn_logits, tf_logits, jp_logits], dim=1)  # [batch_size, 4]
+
+        return logits
+
+
 class MBTIClassifier(pl.LightningModule):
     """
     PyTorch Lightning module for MBTI personality classification using DistilBERT.
@@ -48,25 +120,13 @@ class MBTIClassifier(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters(ignore=["pos_weight"])
 
-        # Load pretrained transformer model
-        logger.info(f"Loading pretrained model: {model_name}")
-        self.encoder = AutoModel.from_pretrained(model_name)
-        hidden_size = self.encoder.config.hidden_size
-
-        # Multi-task classification heads (4 binary classifiers)
-        # Shared representation
-        self.shared_layers = nn.Sequential(
-            nn.Dropout(dropout),
-            nn.Linear(hidden_size, hidden_size),
-            nn.GELU(),
-            nn.Dropout(dropout),
-        )
-
-        # Task-specific heads for E/I, S/N, T/F, J/P
-        self.ei_head = nn.Linear(hidden_size, 1)  # E vs I
-        self.sn_head = nn.Linear(hidden_size, 1)  # S vs N
-        self.tf_head = nn.Linear(hidden_size, 1)  # T vs F
-        self.jp_head = nn.Linear(hidden_size, 1)  # J vs P
+        # Create the model
+        self.model = MBTIModel(model_name=model_name, dropout=dropout)
+        
+        # Compile the model if supported (requires Python < 3.12)
+        self.model = torch.compile(self.model)
+        logger.info("Model compiled with torch.compile")
+        
 
         # Loss function - Binary Cross Entropy with Logits (includes sigmoid)
         self.criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight, reduction="none")
@@ -109,13 +169,13 @@ class MBTIClassifier(pl.LightningModule):
         """Freeze encoder parameters based on configuration."""
         if self.hparams.freeze_encoder:
             logger.info("Freezing entire encoder")
-            for param in self.encoder.parameters():
+            for param in self.model.encoder.parameters():
                 param.requires_grad = False
         elif self.hparams.freeze_layers > 0:
             logger.info(f"Freezing first {self.hparams.freeze_layers} layers")
             # For DistilBERT, freeze transformer layers
-            if hasattr(self.encoder, "transformer"):
-                for layer in self.encoder.transformer.layer[: self.hparams.freeze_layers]:
+            if hasattr(self.model.encoder, "transformer"):
+                for layer in self.model.encoder.transformer.layer[: self.hparams.freeze_layers]:
                     for param in layer.parameters():
                         param.requires_grad = False
 
@@ -130,25 +190,7 @@ class MBTIClassifier(pl.LightningModule):
         Returns:
             Logits [batch_size, 4] for E/I, S/N, T/F, J/P tasks
         """
-        # Get encoder outputs
-        outputs = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
-
-        # Use [CLS] token representation (first token)
-        cls_output = outputs.last_hidden_state[:, 0, :]
-
-        # Pass through shared layers
-        shared_repr = self.shared_layers(cls_output)
-
-        # Task-specific predictions
-        ei_logits = self.ei_head(shared_repr)  # [batch_size, 1]
-        sn_logits = self.sn_head(shared_repr)  # [batch_size, 1]
-        tf_logits = self.tf_head(shared_repr)  # [batch_size, 1]
-        jp_logits = self.jp_head(shared_repr)  # [batch_size, 1]
-
-        # Concatenate all task logits
-        logits = torch.cat([ei_logits, sn_logits, tf_logits, jp_logits], dim=1)  # [batch_size, 4]
-
-        return logits
+        return self.model(input_ids, attention_mask)
 
     def _shared_step(self, batch: Dict[str, torch.Tensor], stage: str) -> Dict[str, torch.Tensor]:
         """

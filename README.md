@@ -1,4 +1,3 @@
-````markdown
 # MBTI Personality Classifier
 
 An end-to-end MLOps pipeline for predicting Myers-Briggs personality types from text using deep learning. This project implements a multi-task DistilBERT classifier that predicts personality dimensions (Introversion/Extraversion, Intuition/Sensing, Thinking/Feeling, Judging/Perceiving) from writing samples.

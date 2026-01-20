@@ -22,7 +22,7 @@ dependencies = [
     "fastapi==0.115.6",
     "mlcroissant>=1.0.22",
     "pandas>=2.3.3",
-    "torch==2.2.2",
+    "torch>=2.5.0",
     "transformers>=4.57.5",
     "typer==0.12.3",
     "uvicorn==0.34.0",

@@ -184,3 +184,5 @@ models/best.ckpt
 processed_mbti.csv
 mbti_1.csv
 outputs/
+notebooks/02_dataset_clearning.ipynb
+uv.lock
