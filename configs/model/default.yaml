@@ -1,5 +1,5 @@
 # Model configuration
-_target_: mbti_classifier.training.model.MBTIClassifier
+_target_: mbti_classifier.model.MBTIClassifier
 
 # Base model
 model_name: distilbert-base-uncased

@@ -3,13 +3,12 @@ import logging
 import random
 import re
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Optional
 
-import pandas as pd
-import typer
 import mlcroissant as mlc
-import torch
+import pandas as pd
 import pytorch_lightning as pl
+import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoTokenizer
@@ -17,49 +16,7 @@ from transformers import AutoTokenizer
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# --- Helper Functions ---
 
-def download_dataset(output_path: Path) -> Path:
-    """Downloads dataset via mlcroissant if not exists."""
-    csv_path = output_path / "mbti_1.csv"
-    if csv_path.exists():
-        logger.info(f"Raw data found at: {csv_path}")
-        return csv_path
-
-    logger.info("Downloading dataset via mlcroissant...")
-    output_path.mkdir(parents=True, exist_ok=True)
-    try:
-        url = "https://www.kaggle.com/datasets/datasnaek/mbti-type/croissant/download"
-        dataset = mlc.Dataset(url)
-        record_sets = dataset.metadata.record_sets
-        records = dataset.records(record_set=record_sets[0].uuid)
-        df = pd.DataFrame(records)
-        df.columns = [col.split("/")[-1] for col in df.columns]
-        df.to_csv(csv_path, index=False)
-        return csv_path
-    except Exception as e:
-        logger.error(f"Error downloading dataset: {e}")
-        raise e
-
-def clean_text(text: str) -> str:
-    """Cleans text by removing separators, URLs, and EXTRA SPACES."""
-    text = str(text)
-    text = text.replace("|||", " ")
-    text = re.sub(r"http\S+", "", text)
-    # FIX: Collapse multiple spaces into one
-    text = re.sub(r'\s+', ' ', text).strip().lower()
-    return text
-
-def load_and_process_df(raw_csv_path: Path) -> pd.DataFrame:
-    df = pd.read_csv(raw_csv_path)
-    df["posts"] = df["posts"].apply(clean_text)
-    df['is_E'] = df['type'].apply(lambda x: 1 if 'E' in x else 0)
-    df['is_S'] = df['type'].apply(lambda x: 1 if 'S' in x else 0)
-    df['is_T'] = df['type'].apply(lambda x: 1 if 'T' in x else 0)
-    df['is_J'] = df['type'].apply(lambda x: 1 if 'J' in x else 0)
-    return df
-
-# --- Dataset Class ---
 class MBTIDataset(Dataset):
     def __init__(self, texts, binary_labels, tokenizer, max_length: int = 512, use_random_window: bool = False):
         self.texts = texts
@@ -157,21 +114,221 @@ class MBTIDataModule(pl.LightningDataModule):
             self.train_dataset = MBTIDataset(train_df["posts"].values, get_labels(train_df), self.tokenizer, self.max_length, use_random_window=True)
             self.val_dataset = MBTIDataset(val_df["posts"].values, get_labels(val_df), self.tokenizer, self.max_length, use_random_window=False)
         if stage == "test" or stage is None:
-            self.test_dataset = MBTIDataset(test_df["posts"].values, get_labels(test_df), self.tokenizer, self.max_length, use_random_window=False)
+            if len(test_df) > 0:
+                test_binary_labels = {
+                    "E": test_df["is_E"].values,
+                    "S": test_df["is_S"].values,
+                    "T": test_df["is_T"].values,
+                    "J": test_df["is_J"].values,
+                }
+                # Use standard truncation for testing (consistent evaluation)
+                self.test_dataset = MBTIDataset(
+                    test_df["posts"].values,
+                    test_binary_labels,
+                    self.tokenizer,
+                    self.max_length,
+                    use_random_window=False,  # No augmentation for testing
+                )
 
-    def train_dataloader(self): return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
-    def val_dataloader(self): return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=self.num_workers)
-    def test_dataloader(self): return DataLoader(self.test_dataset, batch_size=self.batch_size, num_workers=self.num_workers)
+        logger.info(f"Data split: Train={len(train_df)}, Val={len(val_df)}, Test={len(test_df)}")
+        logger.info(f"Max sequence length: {self.max_length}")
 
-# --- CLI Command ---
-def process_data_cli(raw_data_path: Annotated[Path, typer.Argument()] = Path("data/raw"), processed_output_path: Annotated[Path, typer.Argument()] = Path("data/processed")):
-    csv_path = download_dataset(raw_data_path)
-    df = load_and_process_df(csv_path)
-    train_df, test_df = train_test_split(df, test_size=0.2, random_state=42, stratify=df['type'])
-    processed_output_path.mkdir(parents=True, exist_ok=True)
-    train_df.to_csv(processed_output_path / "train.csv", index=False)
-    test_df.to_csv(processed_output_path / "test.csv", index=False)
-    logger.info(f"Success! Data saved to: {processed_output_path}")
+    def train_dataloader(self):
+        """Create training DataLoader."""
+        return DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=self.num_workers,
+            pin_memory=True,
+            persistent_workers=self.num_workers > 0,
+        )
+
+    def val_dataloader(self):
+        """Create validation DataLoader."""
+        if self.val_dataset is None:
+            return None
+
+        return DataLoader(
+            self.val_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            pin_memory=True,
+            persistent_workers=self.num_workers > 0,
+        )
+
+    def test_dataloader(self):
+        """Create test DataLoader."""
+        if self.test_dataset is None:
+            return None
+
+        return DataLoader(
+            self.test_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            pin_memory=True,
+            persistent_workers=self.num_workers > 0,
+        )
+
+    def _ensure_data(self):
+        """Download dataset if not present locally."""
+        csv_path = self.raw_data_path / "mbti_1.csv"
+
+        if csv_path.exists():
+            logger.info(f"Raw data found at: {csv_path}")
+            return csv_path
+
+        logger.info("Downloading dataset via mlcroissant...")
+        self.raw_data_path.mkdir(parents=True, exist_ok=True)
+
+        try:
+            url = "https://www.kaggle.com/datasets/datasnaek/mbti-type/croissant/download"
+            dataset = mlc.Dataset(url)
+            record_sets = dataset.metadata.record_sets
+            records = dataset.records(record_set=record_sets[0].uuid)
+            df = pd.DataFrame(records)
+
+            # Clean column names
+            df.columns = [col.split("/")[-1] for col in df.columns]
+
+            df.to_csv(csv_path, index=False)
+            logger.info(f"Dataset saved to: {csv_path}")
+        except Exception as e:
+            logger.error(f"Error downloading dataset: {e}")
+            raise
+
+        return csv_path
+
+    def _load_or_process_data(self):
+        """
+        Load processed data if available, otherwise download, process, and save it.
+
+        Returns:
+            Processed DataFrame with cleaned text and binary labels
+        """
+        processed_file = self.processed_data_path / "processed_mbti.csv"
+
+        # Check if processed data exists
+        if processed_file.exists():
+            logger.info(f"Loading processed data from: {processed_file}")
+            df = pd.read_csv(processed_file)
+            logger.info(f"Loaded {len(df)} preprocessed rows")
+            return df
+
+        # Download and process data
+        logger.info("Processed data not found. Downloading and preprocessing...")
+        self._ensure_data()
+        df = self._load_and_clean_data()
+
+        # Save processed data
+        self.processed_data_path.mkdir(parents=True, exist_ok=True)
+        df.to_csv(processed_file, index=False)
+        logger.info(f"Saved processed data to: {processed_file}")
+
+        return df
+
+    def _load_and_clean_data(self):
+        """Load and clean the MBTI dataset."""
+        csv_path = self.raw_data_path / "mbti_1.csv"
+
+        if not csv_path.exists():
+            raise FileNotFoundError(
+                f"Data file not found at {csv_path}. " "Run prepare_data() first or ensure the file exists."
+            )
+
+        df = pd.read_csv(csv_path)
+        logger.info(f"Loaded {len(df)} rows from {csv_path}")
+
+        # Clean 'type' column (remove byte string artifacts)
+        if df["type"].dtype == object:
+            df["type"] = df["type"].astype(str).str.replace(r"^b'|'$", "", regex=True).str.upper()
+
+        # Clean 'posts' column
+        df["posts"] = df["posts"].astype(str).apply(self._clean_text)
+
+        # Remove rows with empty posts after cleaning
+        initial_len = len(df)
+        df = df[df["posts"].str.len() > 0].reset_index(drop=True)
+        removed = initial_len - len(df)
+        if removed > 0:
+            logger.warning(f"Removed {removed} rows with empty posts after cleaning")
+
+        # Add binary features (optional, can be used for multi-task learning)
+        df["is_E"] = df["type"].apply(lambda x: 1 if "E" in x else 0)
+        df["is_S"] = df["type"].apply(lambda x: 1 if "S" in x else 0)
+        df["is_T"] = df["type"].apply(lambda x: 1 if "T" in x else 0)
+        df["is_J"] = df["type"].apply(lambda x: 1 if "J" in x else 0)
+
+        logger.info(f"Final dataset size: {len(df)} rows")
+        return df
+
+    @staticmethod
+    def _clean_text(text: str) -> str:
+        """
+        Clean text data by removing URLs, byte artifacts, and normalizing whitespace.
+        Optimized for transformer models which can handle more natural text.
+
+        Args:
+            text: Raw text string
+
+        Returns:
+            Cleaned text string
+        """
+        # Remove byte string prefixes
+        if text.startswith("b'") or text.startswith('b"'):
+            text = text[2:-1]
+
+        # Remove post separators
+        text = text.replace("|||", " ")
+
+        # Remove URLs (keep URL text is sometimes meaningful, but typically not)
+        text = re.sub(r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+", "", text)
+
+        # Remove markdown image syntax
+        text = re.sub(r"!\[.*?\]\(.*?\)", "", text)
+
+        # Remove excessive special characters but keep punctuation for sentiment
+        # Keep: letters, numbers, spaces, and common punctuation
+        text = re.sub(r"[^a-zA-Z0-9\s\.\,\!\?\'\-\:\;]", " ", text)
+
+        # Normalize whitespace
+        text = re.sub(r"\s+", " ", text).strip()
+
+        # Keep original casing - transformers can learn from it
+        return text
+
+
+def main():
+    """Download and preprocess MBTI data."""
+    parser = argparse.ArgumentParser(description="Download and preprocess MBTI dataset")
+    parser.add_argument("raw_data_path", type=str, help="Path to store raw downloaded data")
+    parser.add_argument("processed_data_path", type=str, help="Path to store processed data")
+    args = parser.parse_args()
+
+    logger.info(f"Raw data path: {args.raw_data_path}")
+    logger.info(f"Processed data path: {args.processed_data_path}")
+
+    # Create data module with specified paths
+    data_module = MBTIDataModule(
+        raw_data_path=args.raw_data_path,
+        processed_data_path=args.processed_data_path,
+    )
+
+    # Download raw data if needed
+    logger.info("Ensuring raw data is downloaded...")
+    data_module._ensure_data()
+
+    # Process and save data
+    logger.info("Processing data...")
+    df = data_module._load_or_process_data()
+
+    logger.info("✓ Data preprocessing complete!")
+    logger.info(f"  - Raw data: {data_module.raw_data_path / 'mbti_1.csv'}")
+    logger.info(f"  - Processed data: {data_module.processed_data_path / 'processed_mbti.csv'}")
+    logger.info(f"  - Total rows: {len(df)}")
+
 
 if __name__ == "__main__":
-    typer.run(process_data_cli)
+    main()
