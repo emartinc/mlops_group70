@@ -18,7 +18,24 @@ logger = logging.getLogger(__name__)
 
 
 class MBTIDataset(Dataset):
+    """PyTorch Dataset for MBTI personality types with tokenization.
+
+    Treats MBTI as 4 independent binary classification tasks:
+    - E/I (Extraversion vs Introversion)
+    - S/N (Sensing vs Intuition)
+    - T/F (Thinking vs Feeling)
+    - J/P (Judging vs Perceiving)
+    """
+
     def __init__(self, texts, binary_labels, tokenizer, max_length: int = 512, use_random_window: bool = False):
+        """
+        Args:
+            texts: List or array of text posts
+            binary_labels: Dict with keys ['E', 'S', 'T', 'J'], values are binary tensors (0 or 1)
+            tokenizer: HuggingFace tokenizer instance
+            max_length: Maximum sequence length for tokenization
+            use_random_window: If True, uses random windows for data augmentation (training only)
+        """
         self.texts = texts
         self.binary_labels = binary_labels
         self.tokenizer = tokenizer
@@ -30,40 +47,137 @@ class MBTIDataset(Dataset):
 
     def __getitem__(self, idx):
         text = str(self.texts[idx])
-        labels = torch.tensor([
-            self.binary_labels["E"][idx], self.binary_labels["S"][idx],
-            self.binary_labels["T"][idx], self.binary_labels["J"][idx]
-        ], dtype=torch.float32)
 
+        # Get binary labels for all 4 dimensions
+        labels = torch.tensor(
+            [
+                self.binary_labels["E"][idx],
+                self.binary_labels["S"][idx],
+                self.binary_labels["T"][idx],
+                self.binary_labels["J"][idx],
+            ],
+            dtype=torch.float32,
+        )
+
+        # Tokenize with random window augmentation if enabled
         if self.use_random_window:
-            full_encoding = self.tokenizer(text, truncation=False, return_tensors="pt")
+            # First tokenize without truncation to get full length
+            full_encoding = self.tokenizer(
+                text,
+                truncation=False,
+                return_tensors="pt",
+            )
+
             input_ids = full_encoding["input_ids"].squeeze(0)
-            if len(input_ids) > self.max_length:
-                content_len = len(input_ids) - 2
-                max_content = self.max_length - 2
-                if content_len > max_content:
-                    start = random.randint(0, content_len - max_content)
-                    content = input_ids[1:-1][start : start + max_content]
-                    input_ids = torch.cat([input_ids[0:1], content, input_ids[-1:]])
+            total_length = len(input_ids)
 
-            if len(input_ids) < self.max_length:
-                pad_len = self.max_length - len(input_ids)
-                input_ids = torch.cat([input_ids, torch.full((pad_len,), self.tokenizer.pad_token_id)])
+            # If sequence is longer than max_length, take a random window
+            # BUT always keep [CLS] at start and [SEP] at end
+            if total_length > self.max_length:
+                # Extract [CLS] token (first token)
+                cls_token = input_ids[0:1]  # [CLS]
+                # Extract [SEP] token (last token)
+                sep_token = input_ids[-1:]  # [SEP]
 
-            attention_mask = (input_ids != self.tokenizer.pad_token_id).long()
+                # Content tokens (excluding [CLS] and [SEP])
+                content_tokens = input_ids[1:-1]
+                content_length = len(content_tokens)
+
+                # Available space for content (max_length - 2 for [CLS] and [SEP])
+                max_content_length = self.max_length - 2
+
+                if content_length > max_content_length:
+                    # Random start position in content
+                    max_start = content_length - max_content_length
+                    start_idx = random.randint(0, max_start)
+                    end_idx = start_idx + max_content_length
+
+                    # Extract random window from content
+                    content_window = content_tokens[start_idx:end_idx]
+                else:
+                    # Content fits, use all of it
+                    content_window = content_tokens
+
+                # Reconstruct: [CLS] + content_window + [SEP]
+                input_ids = torch.cat([cls_token, content_window, sep_token])
+                attention_mask = torch.ones(len(input_ids), dtype=torch.long)
+
+                # Pad if necessary
+                current_length = len(input_ids)
+                if current_length < self.max_length:
+                    padding_length = self.max_length - current_length
+                    input_ids = torch.cat(
+                        [input_ids, torch.full((padding_length,), self.tokenizer.pad_token_id, dtype=torch.long)]
+                    )
+                    attention_mask = torch.cat([attention_mask, torch.zeros(padding_length, dtype=torch.long)])
+            else:
+                # If shorter than max_length, pad normally
+                attention_mask = torch.ones(total_length, dtype=torch.long)
+                padding_length = self.max_length - total_length
+                if padding_length > 0:
+                    input_ids = torch.cat(
+                        [input_ids, torch.full((padding_length,), self.tokenizer.pad_token_id, dtype=torch.long)]
+                    )
+                    attention_mask = torch.cat([attention_mask, torch.zeros(padding_length, dtype=torch.long)])
         else:
-            encoding = self.tokenizer(text, max_length=self.max_length, padding="max_length", truncation=True, return_tensors="pt")
+            # Standard tokenization with truncation from the beginning
+            encoding = self.tokenizer(
+                text,
+                max_length=self.max_length,
+                padding="max_length",
+                truncation=True,
+                return_tensors="pt",
+            )
             input_ids = encoding["input_ids"].squeeze(0)
             attention_mask = encoding["attention_mask"].squeeze(0)
 
-        return {"input_ids": input_ids, "attention_mask": attention_mask, "labels": labels}
+        return {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "labels": labels,  # [4] binary labels for E, S, T, J
+        }
 
-# --- DataModule Class ---
+
 class MBTIDataModule(pl.LightningDataModule):
-    def __init__(self, raw_data_path: str = "data/raw", processed_data_path: str = "data/processed", batch_size: int = 16, num_workers: int = 4, test_size: float = 0.15, val_size: float = 0.15, random_seed: int = 42, model_name: str = "distilbert-base-uncased", max_length: int = 512, cache_dir: Optional[str] = None):
+    """
+    PyTorch Lightning DataModule for MBTI personality classification.
+
+    Handles data downloading, cleaning, preprocessing, tokenization, and DataLoader creation.
+    Optimized for fine-tuning transformer models like DistilBERT.
+    """
+
+    def __init__(
+        self,
+        raw_data_path: str = "data/raw",
+        processed_data_path: str = "data/processed",
+        batch_size: int = 16,
+        num_workers: int = 4,
+        test_size: float = 0.15,
+        val_size: float = 0.15,
+        random_seed: int = 42,
+        model_name: str = "distilbert-base-uncased",
+        max_length: int = 512,
+        cache_dir: Optional[str] = None,
+    ):
+        """
+        Args:
+            raw_data_path: Path to store raw downloaded data
+            processed_data_path: Path to store processed data
+            batch_size: Batch size for DataLoaders (default 16 for transformer models)
+            num_workers: Number of workers for DataLoaders
+            test_size: Proportion of data for test set
+            val_size: Proportion of train data for validation set
+            random_seed: Random seed for reproducibility
+            model_name: HuggingFace model name for tokenizer
+            max_length: Maximum sequence length for tokenization
+            cache_dir: Optional directory to cache tokenizer and models
+        """
         super().__init__()
+
+        # Convert paths to Path objects
         self.raw_data_path = Path(raw_data_path)
         self.processed_data_path = Path(processed_data_path)
+
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.test_size = test_size
@@ -73,46 +187,104 @@ class MBTIDataModule(pl.LightningDataModule):
         self.max_length = max_length
         self.cache_dir = cache_dir
 
+        # Initialize tokenizer
         self.tokenizer = None
+
+        # Will be populated during setup
         self.train_dataset = None
         self.val_dataset = None
         self.test_dataset = None
-
-        # FIX: Needed for tests
-        self.num_classes = 16
-        self.type_to_idx = {}
-
-    @staticmethod
-    def _clean_text(text):
-        return clean_text(text)
+        self.type_to_idx = None
+        self.idx_to_type = None
+        self.num_classes = None
 
     def prepare_data(self):
-        download_dataset(self.raw_data_path)
+        """
+        Download data and tokenizer if needed. Called only on 1 GPU in distributed settings.
+        """
+        # Download dataset
+        self._ensure_data()
+
+        # Download tokenizer (will be cached)
+        logger.info(f"Loading tokenizer: {self.model_name}")
         AutoTokenizer.from_pretrained(self.model_name, cache_dir=self.cache_dir)
 
     def setup(self, stage: Optional[str] = None):
+        """
+        Load and split data. Called on every GPU in distributed settings.
+
+        Args:
+            stage: 'fit', 'validate', 'test', or 'predict'
+        """
+        # Initialize tokenizer if not already done
         if self.tokenizer is None:
+            logger.info(f"Initializing tokenizer: {self.model_name}")
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, cache_dir=self.cache_dir)
 
-        csv_path = self.raw_data_path / "mbti_1.csv"
-        if not csv_path.exists():
-            download_dataset(self.raw_data_path)
+        # Load processed data or create it
+        df = self._load_or_process_data()
 
-        df = load_and_process_df(csv_path)
-
-        # FIX: Populate type_to_idx for tests
+        # Create label mappings
         unique_types = sorted(df["type"].unique())
         self.type_to_idx = {t: i for i, t in enumerate(unique_types)}
+        self.idx_to_type = {i: t for t, i in self.type_to_idx.items()}
+        self.num_classes = len(unique_types)
 
-        train_val_df, test_df = train_test_split(df, test_size=self.test_size, random_state=self.random_seed, stratify=df["type"])
-        train_df, val_df = train_test_split(train_val_df, test_size=self.val_size, random_state=self.random_seed, stratify=train_val_df["type"])
+        logger.info(f"Number of classes: {self.num_classes}")
+        logger.info(f"Class distribution:\n{df['type'].value_counts().sort_index()}")
 
-        def get_labels(d):
-            return {"E": d["is_E"].values, "S": d["is_S"].values, "T": d["is_T"].values, "J": d["is_J"].values}
+        df["type_idx"] = df["type"].map(self.type_to_idx)
 
+        # Split into train+val and test
+        if self.test_size > 0:
+            train_val_df, test_df = train_test_split(
+                df, test_size=self.test_size, random_state=self.random_seed, stratify=df["type"]
+            )
+        else:
+            train_val_df = df
+            test_df = pd.DataFrame()
+
+        # Split train into train and validation
+        if self.val_size > 0:
+            train_df, val_df = train_test_split(
+                train_val_df, test_size=self.val_size, random_state=self.random_seed, stratify=train_val_df["type"]
+            )
+        else:
+            train_df = train_val_df
+            val_df = pd.DataFrame()
+
+        # Create datasets with binary labels for multi-task learning
         if stage == "fit" or stage is None:
-            self.train_dataset = MBTIDataset(train_df["posts"].values, get_labels(train_df), self.tokenizer, self.max_length, use_random_window=True)
-            self.val_dataset = MBTIDataset(val_df["posts"].values, get_labels(val_df), self.tokenizer, self.max_length, use_random_window=False)
+            train_binary_labels = {
+                "E": train_df["is_E"].values,
+                "S": train_df["is_S"].values,
+                "T": train_df["is_T"].values,
+                "J": train_df["is_J"].values,
+            }
+            # Use random window augmentation for training
+            self.train_dataset = MBTIDataset(
+                train_df["posts"].values,
+                train_binary_labels,
+                self.tokenizer,
+                self.max_length,
+                use_random_window=True,  # Enable random windows for training
+            )
+            if len(val_df) > 0:
+                val_binary_labels = {
+                    "E": val_df["is_E"].values,
+                    "S": val_df["is_S"].values,
+                    "T": val_df["is_T"].values,
+                    "J": val_df["is_J"].values,
+                }
+                # Use standard truncation for validation (consistent evaluation)
+                self.val_dataset = MBTIDataset(
+                    val_df["posts"].values,
+                    val_binary_labels,
+                    self.tokenizer,
+                    self.max_length,
+                    use_random_window=False,  # No augmentation for validation
+                )
+
         if stage == "test" or stage is None:
             if len(test_df) > 0:
                 test_binary_labels = {

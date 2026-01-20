@@ -3,8 +3,9 @@ from typing import Dict, Optional
 
 import pytorch_lightning as pl
 import torch
-import pytorch_lightning as pl
-from transformers import DistilBertForSequenceClassification
+import torch.nn as nn
+from torchmetrics import Accuracy, F1Score, MetricCollection
+from transformers import AutoModel, get_linear_schedule_with_warmup
 
 logger = logging.getLogger(__name__)
 

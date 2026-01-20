@@ -183,3 +183,4 @@ AGENTS.md
 models/best.ckpt
 processed_mbti.csv
 mbti_1.csv
+outputs/
