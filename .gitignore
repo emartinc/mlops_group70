@@ -186,3 +186,6 @@ mbti_1.csv
 outputs/
 notebooks/02_dataset_clearning.ipynb
 uv.lock
+models/
+models/best-v1.ckpt
+models/*.ckpt
