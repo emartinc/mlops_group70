@@ -6,6 +6,7 @@ on:
       - 'data/**'          # Triggers if you change files in data/
       - '**.dvc'           # Triggers if you update a DVC file
       - 'dvc.lock'         # Triggers if you update the DVC lockfile
+  workflow_dispatch:        # Allows manual trigger from GitHub UI
 
 jobs:
   test_data_pipeline:
