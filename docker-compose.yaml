@@ -1,0 +1,53 @@
+services:
+  train:
+    build:
+      context: .
+      dockerfile: dockerfiles/train.dockerfile
+    image: mbti-train:latest
+    container_name: mbti-train
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./configs:/app/configs
+    environment:
+      - PYTHONUNBUFFERED=1
+    profiles:
+      - training
+
+  api:
+    build:
+      context: .
+      dockerfile: dockerfiles/api.dockerfile
+    image: mbti-api:latest
+    container_name: mbti-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  ui:
+    build:
+      context: .
+      dockerfile: dockerfiles/ui.dockerfile
+    image: mbti-ui:latest
+    container_name: mbti-ui
+    ports:
+      - "8501:8501"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - API_URL=http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+# No necesitas esta sección porque usas bind mounts

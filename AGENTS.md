@@ -56,3 +56,55 @@
   via Hydra's `instantiate()` function using `_target_` in YAML configs.
 * **Multi-task binary classification**: The model treats MBTI as 4 independent binary tasks (E/I, S/N, T/F, J/P)
   instead of 16-class classification for better performance.
+
+
+## Docker Commands
+
+* The project uses **Docker Compose** for containerization:
+  * Build images: `docker compose build` or `uv run invoke docker-build`
+  * Train model: `docker compose run --rm train` or `uv run invoke docker-train`
+  * Start services: `docker compose up -d api ui` or `uv run invoke docker-up`
+  * Stop services: `docker compose down` or `uv run invoke docker-down`
+  * View logs: `docker compose logs -f [service]` or `uv run invoke docker-logs --service=api`
+  * Restart: `docker compose restart [service]` or `uv run invoke docker-restart --service=api`
+  
+* **Services:**
+  * `train`: One-time job to train the model (saves to `models/`)
+  * `api`: FastAPI server on port 8000 (loads model from `models/`)
+  * `ui`: Streamlit app on port 8501 (connects to API via `API_URL` env var)
+  
+* **Volumes:**
+  * `./models` - Shared between train and api (models saved/loaded here)
+  * `./data` - Shared for dataset caching (raw and processed data)
+  * `./configs` - Hydra configurations for training
+  
+* **Environment Variables:**
+  * `API_URL`: URL for UI to connect to API (default: `http://localhost:8000`, Docker: `http://api:8000`)
+  * Set in `docker-compose.yaml` under `ui.environment`
+
+## Workflows
+
+### Development (local without Docker)
+```bash
+uv run invoke train          # Train model locally
+uv run invoke api            # Start API (terminal 1)
+uv run invoke ui             # Start UI (terminal 2)
+```
+
+### Production (with Docker)
+```bash
+# First time setup
+uv run invoke docker-build   # Build images
+uv run invoke docker-train   # Train model in container
+uv run invoke docker-up      # Start API + UI
+
+# View logs
+uv run invoke docker-logs --service=api
+
+# Re-train and restart
+uv run invoke docker-train
+uv run invoke docker-restart --service=api
+
+# Stop everything
+uv run invoke docker-down
+```

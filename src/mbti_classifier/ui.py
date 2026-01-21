@@ -1,9 +1,10 @@
+import os
 import plotly.graph_objects as go
 import requests
 import streamlit as st
 
 # API Configuration
-API_URL = "http://localhost:8000"
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 # MBTI Type Descriptions
 MBTI_DESCRIPTIONS = {
