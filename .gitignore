@@ -6,6 +6,11 @@ manual_test/
 # other local dev info
 .vscode/
 
+# Google Cloud credentials
+*.json
+!.devcontainer/*.json
+!.vscode/*.json
+
 # Mac OS-specific storage files
 .DS_Store
 

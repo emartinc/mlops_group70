@@ -25,6 +25,13 @@
     * Production: `configs/train_production.yaml`
     * See `configs/README.md` for detailed configuration guide
 * Training saves **only the best model** (no last.ckpt or other checkpoints).
+* The project uses **DVC** (Data Version Control) for versioning data and models:
+    * Remote storage: Google Cloud Storage bucket `mlops70_bucket`
+    * Pull data: `uv run dvc pull` or `uv run invoke dvc-pull`
+    * Push data: `uv run dvc push` or `uv run invoke dvc-push`
+    * Check status: `uv run dvc status` or `uv run invoke dvc-status`
+    * **Important**: After cloning, run `uv run dvc pull` to download data and models
+    * **Important**: Data files (`data/`, `models/`) are NOT in Git, only metadata (`.dvc` files)
 
 # Code style
 

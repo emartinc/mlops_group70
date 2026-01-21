@@ -11,6 +11,8 @@ This project operationalizes a complete machine learning lifecycle for MBTI pers
 - **Advanced data handling**: Random window sampling for long sequences (>512 tokens), preserving special tokens
 - **Production-ready serving**: FastAPI backend with Streamlit UI featuring interactive radar plot visualizations
 - **Modular configuration**: Hydra-based configs for reproducible experiments across different environments
+- **Data versioning**: DVC integration with Google Cloud Storage for tracking datasets and models
+- **Containerization**: Docker Compose setup for training, API, and UI services
 - **Comprehensive testing**: Unit and integration tests with coverage reporting
 
 ### Dataset
@@ -42,10 +44,16 @@ This project operationalizes a complete machine learning lifecycle for MBTI pers
 │   ├── model/                   # Model hyperparameters
 │   └── trainer/                 # PyTorch Lightning Trainer settings
 ├── data/
-│   ├── raw/                     # Raw dataset (auto-downloaded)
-│   └── processed/               # Preprocessed and cached data
+│   ├── raw/                     # Raw dataset (auto-downloaded, tracked by DVC)
+│   ├── raw.dvc                  # DVC metadata for raw data
+│   ├── processed/               # Preprocessed and cached data (tracked by DVC)
+│   └── processed.dvc            # DVC metadata for processed data
+├── dockerfiles/                 # Dockerfiles for train, api, and ui services
 ├── docs/                        # MkDocs documentation
-├── models/                      # Saved model checkpoints
+├── models/                      # Saved model checkpoints (tracked by DVC)
+├── models.dvc                   # DVC metadata for models
+├── docker-compose.yaml          # Docker Compose configuration
+├── .dvc/                        # DVC configuration and cache
 ├── src/mbti_classifier/
 │   ├── api/
 │   │   ├── api.py              # FastAPI inference server
@@ -92,7 +100,25 @@ uv run pre-commit install --install-hooks
 
 > **Note**: You don't need to manually activate the virtual environment. `uv run` handles this automatically.
 
-#### 3. Prepare the Data
+#### 3. Pull Data and Models from DVC
+
+```bash
+# Authenticate with Google Cloud (first time only)
+gcloud auth application-default login
+
+# Pull data and models from Google Cloud Storage
+uv run dvc pull
+```
+
+**What this does**:
+- Downloads raw dataset from GCS bucket `mlops70_bucket`
+- Downloads preprocessed data
+- Downloads trained model checkpoints
+- All versioned with DVC for reproducibility
+
+> **Note**: If you want to train from scratch instead of using the existing model, you can skip `dvc pull` and proceed to step 4.
+
+#### 4. Prepare the Data (Optional - if training from scratch)
 
 The data preprocessing step automatically downloads the dataset if missing and creates cached processed files:
 
@@ -106,7 +132,9 @@ uv run invoke preprocess-data
 - Saves processed data to `data/processed/processed_mbti.csv`
 - Subsequent runs load from cache for faster startup
 
-#### 4. Train the Model
+> **Note**: If you ran `dvc pull`, the data is already preprocessed and this step can be skipped.
+
+#### 5. Train the Model
 
 ```bash
 # Standard training (GPU recommended)
@@ -122,9 +150,25 @@ uv run python src/mbti_classifier/training/train.py --config-name train_cpu
 uv run python src/mbti_classifier/training/train.py --config-name train_production
 ```
 
-**Training saves only the best model** based on validation F1 score. Checkpoints are saved to `models/checkpoints/`.
+**Training saves only the best model** based on validation F1 score. Checkpoints are saved to `models/`.
 
-#### 5. Run Tests
+**After training**, you can version your new model:
+```bash
+# Track new model with DVC
+uv run dvc add models
+
+# Commit metadata to Git
+git add models.dvc
+git commit -m "Update model version"
+
+# Push model to GCS
+uv run dvc push
+
+# Push Git changes
+git push
+```
+
+#### 6. Run Tests
 
 ```bash
 # Run all tests with coverage
@@ -247,21 +291,64 @@ All tasks are defined in `tasks.py` and can be run with `uv run invoke <task>`:
 | **test** | `uv run invoke test` | Run all tests with coverage report |
 | **api** | `uv run invoke api` | Start FastAPI server (port 8000) |
 | **ui** | `uv run invoke ui` | Start Streamlit UI (port 8501) |
-| **docker-build** | `uv run invoke docker-build` | Build Docker images for training and API |
+| **docker-build** | `uv run invoke docker-build` | Build all Docker images |
+| **docker-train** | `uv run invoke docker-train` | Train model in Docker container |
+| **docker-up** | `uv run invoke docker-up` | Start API and UI services |
+| **docker-down** | `uv run invoke docker-down` | Stop all Docker services |
+| **docker-logs** | `uv run invoke docker-logs` | View logs from services |
+| **dvc-pull** | `uv run invoke dvc-pull` | Pull data/models from GCS |
+| **dvc-push** | `uv run invoke dvc-push` | Push data/models to GCS |
+| **dvc-status** | `uv run invoke dvc-status` | Check DVC status |
 | **serve-docs** | `uv run invoke serve-docs` | Serve MkDocs documentation locally |
 | **build-docs** | `uv run invoke build-docs` | Build documentation site |
 
 ## 🐳 Docker Support
 
-Build containerized versions:
+The project includes a complete Docker Compose setup with 3 services:
+
+- **train**: One-time training job (saves model to `models/`)
+- **api**: FastAPI server on port 8000 (loads model from `models/`)
+- **ui**: Streamlit app on port 8501 (connects to API)
+
+### Development Workflow (without Docker)
 
 ```bash
-# Build both training and API images
+# Train locally
+uv run invoke train
+
+# Start API (terminal 1)
+uv run invoke api
+
+# Start UI (terminal 2)
+uv run invoke ui
+```
+
+### Production Workflow (with Docker)
+
+```bash
+# Build images
 uv run invoke docker-build
 
-# Build with auto progress output
-uv run invoke docker-build --progress=auto
+# Train model in container (optional if using existing model)
+uv run invoke docker-train
+
+# Start API + UI services
+uv run invoke docker-up
+
+# View logs
+uv run invoke docker-logs
+
+# Stop services
+uv run invoke docker-down
 ```
+
+**Shared volumes**:
+- `./models` - Shared between train and api (model saved/loaded here)
+- `./data` - Shared for dataset caching
+- `./configs` - Hydra configurations for training
+
+**Environment variables**:
+- `API_URL`: URL for UI to connect to API (default: `http://localhost:8000`, Docker: `http://api:8000`)
 
 ## 🧪 Development Workflow
 

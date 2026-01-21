@@ -101,3 +101,29 @@ def docker_full_pipeline(ctx: Context) -> None:
     ctx.run("docker compose run --rm train", echo=True, pty=not WINDOWS)
     ctx.run("docker compose up -d api ui", echo=True, pty=not WINDOWS)
     ctx.run("docker compose logs -f", echo=True, pty=not WINDOWS)
+
+# DVC commands
+@task
+def dvc_status(ctx: Context) -> None:
+    """Check DVC status."""
+    ctx.run("uv run dvc status", echo=True, pty=not WINDOWS)
+
+@task
+def dvc_push(ctx: Context) -> None:
+    """Push data to DVC remote (GCS)."""
+    ctx.run("uv run dvc push", echo=True, pty=not WINDOWS)
+
+@task
+def dvc_pull(ctx: Context) -> None:
+    """Pull data from DVC remote (GCS)."""
+    ctx.run("uv run dvc pull", echo=True, pty=not WINDOWS)
+
+@task
+def dvc_add_data(ctx: Context) -> None:
+    """Add data/ and models/ to DVC tracking."""
+    ctx.run("uv run dvc add data/raw data/processed models", echo=True, pty=not WINDOWS)
+    print("\n✓ Data tracked with DVC")
+    print("Remember to commit:")
+    print("  git add data/*.dvc models.dvc .gitignore")
+    print("  git commit -m 'Update data version'")
+    print("  uv run invoke dvc-push")
