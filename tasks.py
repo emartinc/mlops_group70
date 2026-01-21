@@ -1,5 +1,7 @@
 import os
+from pathlib import Path
 
+import yaml
 from dotenv import load_dotenv
 from invoke import Context, task
 
@@ -9,11 +11,21 @@ WINDOWS = os.name == "nt"
 PROJECT_NAME = "mbti_classifier"
 PYTHON_VERSION = "3.12"
 
+def load_data_config() -> dict:
+    """Load data configuration from YAML file."""
+    config_path = Path("configs/data/default.yaml")
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+    return config
+
 # Project commands
 @task
 def preprocess_data(ctx: Context) -> None:
     """Preprocess data."""
-    ctx.run(f"uv run src/{PROJECT_NAME}/data.py data/raw data/processed", echo=True, pty=not WINDOWS)
+    config = load_data_config()
+    raw_path = config.get("raw_data_path", "data/raw")
+    processed_path = config.get("processed_data_path", "data/processed")
+    ctx.run(f"uv run src/{PROJECT_NAME}/data.py {raw_path} {processed_path}", echo=True, pty=not WINDOWS)
 
 @task
 def train(ctx: Context) -> None:
