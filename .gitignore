@@ -189,3 +189,4 @@ uv.lock
 models/
 models/best-v1.ckpt
 models/*.ckpt
+/models
