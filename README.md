@@ -2,6 +2,28 @@
 
 An end-to-end MLOps pipeline for predicting Myers-Briggs personality types from text using deep learning. This project implements a multi-task DistilBERT classifier that predicts personality dimensions (Introversion/Extraversion, Intuition/Sensing, Thinking/Feeling, Judging/Perceiving) from writing samples.
 
+## 📚 Documentation
+
+**Comprehensive documentation is available at: http://localhost:8000** (when running `uv run mkdocs serve`)
+
+Quick links:
+- [Installation Guide](docs/getting-started/installation.md)
+- [Quickstart Tutorial](docs/getting-started/quickstart.md)
+- [Architecture Overview](docs/architecture/overview.md)
+- [API Reference](docs/api/)
+
+Or build the docs locally:
+
+```bash
+# Serve documentation (with live reload)
+uv run mkdocs serve
+# Open http://localhost:8000
+
+# Build static site
+uv run mkdocs build
+# Output in site/ directory
+```
+
 ## 🎯 Project Overview
 
 This project operationalizes a complete machine learning lifecycle for MBTI personality prediction:

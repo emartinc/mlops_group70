@@ -18,6 +18,11 @@
     `tasks.py` file.
 * The project uses `pre-commit` for managing pre-commit hooks. To run all hooks on all files, use
     `uv run pre-commit run --all-files`. For more information, refer to the `.pre-commit-config.yaml` file.
+* The project uses **MkDocs** for documentation:
+    * Serve docs locally: `uv run mkdocs serve` (opens at http://localhost:8000)
+    * Build static site: `uv run mkdocs build` (output in `site/` directory)
+    * Documentation source is in `docs/` directory
+    * See `mkdocs.yml` for navigation structure
 * The project uses **Hydra** for configuration management. All configs are in the `configs/` directory:
     * Main config: `configs/train.yaml`
     * Quick test: `configs/train_quick.yaml`
