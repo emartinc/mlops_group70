@@ -1,0 +1,45 @@
+name: Mirror to Target Repo
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual triggering from the Actions tab
+
+jobs:
+  mirror-sync:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Checkout full history (Required for mirroring)
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
+      
+      # 2. Sync to target using PAT (Personal Access Token)
+      - name: Push to Target Repository
+        env:
+          # The secret you created in the repository settings
+          API_TOKEN_GITHUB: ${{ secrets.SYNC_TOKEN }}
+          
+          # Target Repository Configuration
+          DESTINATION_USER: "emartinc" 
+          DESTINATION_REPO: "mlops_group70"
+          DESTINATION_BRANCH: "main"
+        run: |
+          # Configure git user (required for the push operation)
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          
+          # Construct the authenticated URL using the PAT
+          # Syntax: https://user:token@github.com/user/repo.git
+          TARGET_URL="https://x-access-token:$API_TOKEN_GITHUB@github.com/$DESTINATION_USER/$DESTINATION_REPO.git"
+          
+          echo "Syncing to $DESTINATION_USER/$DESTINATION_REPO..."
+          
+          # Add the target remote
+          git remote add destination "$TARGET_URL"
+          
+          # Force Push (Mirror Mode)
+          # --force ensures the target becomes an exact copy of the source
+          git push destination main:$DESTINATION_BRANCH --force
