@@ -1,61 +1,48 @@
-name: Deploy to Open Repo
+name: Mirror Main to Target (SSH)
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
-
-permissions:
-  contents: read
+  workflow_dispatch:
 
 jobs:
-  deploy:
-    if: |
-      github.event.repository.name == 'mlops_group70' &&
-      github.event.push.pusher.username != 'github-actions[bot]'
-    name: Push built output to target repo via SSH
+  mirror-sync:
+    # Evita que el workflow corra si, por error, lo activas en el repo destino
+    if: github.repository == 'mlopsgroup70/mlops_group70'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository (no persisted credentials)
+      # 1. Descargar TODO el historial (Vital para un espejo)
+      - name: Checkout Source
         uses: actions/checkout@v4
         with:
-          ref: main
-          fetch-depth: 0
-          persist-credentials: false
+          fetch-depth: 0 
 
-      - name: Configure git author
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Update deployment branch and remove this workflow so it doesn't get pushed
-        run: |
-          git merge --squash -X theirs origin/main --allow-unrelated-histories
-          git restore --staged README.md
-          git commit -m "deploy changes"
-          
-      - name: Start ssh-agent and add deploy key
+      # 2. Cargar la llave SSH (Secrets)
+      - name: Setup SSH Agent
         uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.DEPLOY }}
 
-      - name: Ensure github.com is in known_hosts
+      # 3. Configurar hosts conocidos para que SSH no pregunte confirmación
+      - name: Add GitHub to Known Hosts
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan github.com >> ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
 
-      - name: Set SSH remote and push via SSH
+      # 4. Sincronización Espejo
+      - name: Force Push to Mirror
         run: |
-          echo "Pushing to SSH remote: git@github.com:emartinc/mlops_group70.git -> branch main"
+          # Definir el remoto destino
+          # Asegúrate de que esta URL es correcta
+          TARGET_URL="git@github.com:emartinc/mlops_group70.git"
 
-          git remote remove origin || true
-          git remote add ssh-origin git@github.com:emartinc/mlops_group70.git
+          echo "Sincronizando espejo hacia: $TARGET_URL"
 
-          # Sanity checks
-          git remote -v
-          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK"
-          ssh -T -o StrictHostKeyChecking=no git@github.com || true
-
-          git push --force -u ssh-origin HEAD:main
+          # Añadir el remoto
+          git remote add mirror_target $TARGET_URL
+          
+          # Push Forzado
+          # -f (force): Sobrescribe el destino para que sea IDÉNTICO al origen.
+          # main:main : Empuja la main local a la main remota.
+          git push -f mirror_target main:main
