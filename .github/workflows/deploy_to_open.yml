@@ -20,7 +20,7 @@ jobs:
       - name: Push to Target Repository
         env:
           # The secret you created in the repository settings
-          API_TOKEN_GITHUB: ${{ secrets.DEPLOY }}
+          API_TOKEN_GITHUB: ${{ secrets.SYNC_TOKEN }}
           
           # Target Repository Configuration
           DESTINATION_USER: "emartinc" 
