@@ -1,22 +1,35 @@
-#FROM ghcr.io/astral-sh/uv:python3.12-alpine AS base
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS base
 
-WORKDIR /app
-
-# Install curl for health checks and build tools for PyTorch
-RUN apt-get update && apt-get install -y \
-    curl \
-    build-essential \
+# Install C++ compiler for torch.compile
+RUN apt-get update && apt-get install -y --no-install-recommends \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-COPY uv.lock pyproject.toml ./
-RUN uv sync --frozen --no-install-project
+# Set working directory
+WORKDIR /app
 
-COPY src/ src/
-COPY README.md LICENSE ./
+# Copy dependency files
+COPY uv.lock uv.lock
+COPY pyproject.toml pyproject.toml
 
-RUN uv sync --frozen
+# Install only core + API dependencies
+RUN uv sync --frozen --no-install-project --group api
+
+# Copy source code
+COPY src src/
+COPY README.md README.md
+COPY LICENSE LICENSE
+
+# Final sync with project
+RUN uv sync --frozen --group api
+
+# Create directories for volumes
+RUN mkdir -p /app/models /app/data
+
+# Set environment variable for model path
+ENV MODEL_PATH=/app/models/best.ckpt
+
+EXPOSE 8000
 
 # Create directory for models (will be mounted as volume)
 RUN mkdir -p models
