@@ -1,9 +1,11 @@
+import os
+
 import plotly.graph_objects as go
 import requests
 import streamlit as st
 
-# API Configuration
-API_URL = "http://localhost:8000"
+# API Configuration - use environment variable if available (for Docker), otherwise localhost
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 # MBTI Type Descriptions
 MBTI_DESCRIPTIONS = {

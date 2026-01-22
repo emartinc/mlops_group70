@@ -123,9 +123,12 @@ class MBTIClassifier(pl.LightningModule):
         # Create the model
         self.model = MBTIModel(model_name=model_name, dropout=dropout)
         
-        # Compile the model if supported (requires Python < 3.12)
-        self.model = torch.compile(self.model)
-        logger.info("Model compiled with torch.compile")
+        # Compile the model for better performance
+        try:
+            self.model = torch.compile(self.model)
+            logger.info("Model compiled with torch.compile")
+        except Exception as e:
+            logger.warning(f"torch.compile failed, using eager mode: {e}")
         
 
         # Loss function - Binary Cross Entropy with Logits (includes sigmoid)

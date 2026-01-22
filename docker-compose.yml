@@ -1,0 +1,90 @@
+services:
+  # Training service
+  train:
+    build:
+      context: .
+      dockerfile: dockerfiles/train.dockerfile
+    image: mbti-classifier-train:latest
+    container_name: mbti-train
+    volumes:
+      # Docker volumes instead of bind mounts
+      - mbti-data:/app/data
+      - mbti-models:/app/models
+      - mbti-logs:/app/logs
+      - mbti-outputs:/app/outputs
+    environment:
+      - WANDB_API_KEY=${WANDB_API_KEY}
+      - HYDRA_FULL_ERROR=1
+    networks:
+      - mbti-network
+    # Training runs once and exits
+    restart: "no"
+
+  # API service
+  api:
+    build:
+      context: .
+      dockerfile: dockerfiles/api.dockerfile
+    image: mbti-classifier-api:latest
+    container_name: mbti-api
+    ports:
+      - "8000:8000"
+    volumes:
+      # Only needs models and data (read-only)
+      - mbti-models:/app/models:ro
+      - mbti-data:/app/data:ro
+    environment:
+      - MODEL_PATH=/app/models/best.ckpt
+    networks:
+      - mbti-network
+    depends_on:
+      - train
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # UI service
+  ui:
+    build:
+      context: .
+      dockerfile: dockerfiles/ui.dockerfile
+    image: mbti-classifier-ui:latest
+    container_name: mbti-ui
+    ports:
+      - "8501:8501"
+    volumes:
+      # Only needs models and data (read-only)
+      - mbti-models:/app/models:ro
+      - mbti-data:/app/data:ro
+    environment:
+      - MODEL_PATH=/app/models/best.ckpt
+      - API_URL=http://api:8000
+    networks:
+      - mbti-network
+    depends_on:
+      - api
+    restart: unless-stopped
+
+# Named volumes (persisted across container restarts)
+volumes:
+  mbti-data:
+    driver: local
+    name: mbti-data
+  mbti-models:
+    driver: local
+    name: mbti-models
+  mbti-logs:
+    driver: local
+    name: mbti-logs
+  mbti-outputs:
+    driver: local
+    name: mbti-outputs
+
+# Network for inter-service communication
+networks:
+  mbti-network:
+    driver: bridge
+    name: mbti-network
