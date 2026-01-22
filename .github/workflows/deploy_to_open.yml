@@ -10,12 +10,12 @@ jobs:
   mirror-sync:
     runs-on: ubuntu-latest
     steps:
-      # 1. Checkout full history (Required for mirroring)
+      # 1. Checkout full history (Required for mirroring) # 
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-
+          fetch-depth: 0 
+      
       # 2. Sync to target using PAT (Personal Access Token)
       - name: Push to Target Repository
         env:
