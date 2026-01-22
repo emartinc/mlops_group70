@@ -6,6 +6,7 @@ on:
       - 'data/**'          # Triggers if you change files in data/
       - '**.dvc'           # Triggers if you update a DVC file
       - 'dvc.lock'         # Triggers if you update the DVC lockfile
+  workflow_dispatch:        # Allows manual trigger from GitHub UI
 
 jobs:
   test_data_pipeline:
@@ -31,4 +32,9 @@ jobs:
       - name: Verify Training Runs
         # We run a very short training epoch just to prove the new data works
         run: |
-          uv run python src/mbti_classifier/train.py --epochs 1
+          uv run python src/mbti_classifier/train.py \
+            trainer.max_epochs=1 \
+            +trainer.limit_train_batches=10 \
+            +trainer.limit_val_batches=5 \
+            use_wandb=false \
+            run_test=false

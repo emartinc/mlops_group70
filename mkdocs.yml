@@ -1,0 +1,81 @@
+site_name: MBTI Personality Classifier
+site_description: End-to-end MLOps pipeline for MBTI personality type prediction
+site_author: MLOps Group 70
+repo_url: https://github.com/mlopsgroup70/mlops_group70
+repo_name: mlopsgroup70/mlops_group70
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+  language: en
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - admonition
+  - pymdownx.arithmatex:
+      generic: true
+  - footnotes
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.mark
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quickstart.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - Data Pipeline: architecture/data-pipeline.md
+      - Model Architecture: architecture/model.md
+      - API & UI: architecture/api-ui.md
+  - Configuration:
+      - Hydra Setup: configuration/hydra.md
+      - Training Configs: configuration/training.md
+      - Data Configs: configuration/data.md
+  - Development:
+      - Docker: development/docker.md
+      - DVC: development/dvc.md
+      - Testing: development/testing.md
+  - API Reference:
+      - Data Module: api/data.md
+      - Model: api/model.md
+      - API Server: api/api.md
+      - UI: api/ui.md
