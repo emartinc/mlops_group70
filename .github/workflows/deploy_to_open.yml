@@ -20,7 +20,7 @@ jobs:
       - name: Checkout repository (no persisted credentials)
         uses: actions/checkout@v4
         with:
-          ref: deploy
+          ref: main
           fetch-depth: 0
           persist-credentials: false
 
