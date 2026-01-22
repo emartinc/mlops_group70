@@ -1,48 +1,45 @@
-name: Mirror Main to Target (SSH)
+name: Mirror to Target Repo
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
+  workflow_dispatch: # Allows manual triggering from the Actions tab
 
 jobs:
   mirror-sync:
-    # Evita que el workflow corra si, por error, lo activas en el repo destino
-    if: github.repository == 'mlopsgroup70/mlops_group70'
     runs-on: ubuntu-latest
     steps:
-      # 1. Descargar TODO el historial (Vital para un espejo)
-      - name: Checkout Source
+      # 1. Checkout full history (Required for mirroring)
+      - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 
+          fetch-depth: 0
 
-      # 2. Cargar la llave SSH (Secrets)
-      - name: Setup SSH Agent
-        uses: webfactory/ssh-agent@v0.9.1
-        with:
-          ssh-private-key: ${{ secrets.DEPLOY }}
-
-      # 3. Configurar hosts conocidos para que SSH no pregunte confirmación
-      - name: Add GitHub to Known Hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-
-      # 4. Sincronización Espejo
-      - name: Force Push to Mirror
-        run: |
-          # Definir el remoto destino
-          # Asegúrate de que esta URL es correcta
-          TARGET_URL="git@github.com:emartinc/mlops_group70.git"
-
-          echo "Sincronizando espejo hacia: $TARGET_URL"
-
-          # Añadir el remoto
-          git remote add mirror_target $TARGET_URL
+      # 2. Sync to target using PAT (Personal Access Token)
+      - name: Push to Target Repository
+        env:
+          # The secret you created in the repository settings
+          API_TOKEN_GITHUB: ${{ secrets.DEPLOY }}
           
-          # Push Forzado
-          # -f (force): Sobrescribe el destino para que sea IDÉNTICO al origen.
-          # main:main : Empuja la main local a la main remota.
-          git push -f mirror_target main:main
+          # Target Repository Configuration
+          DESTINATION_USER: "emartinc" 
+          DESTINATION_REPO: "mlops_group70"
+          DESTINATION_BRANCH: "main"
+        run: |
+          # Configure git user (required for the push operation)
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          
+          # Construct the authenticated URL using the PAT
+          # Syntax: https://user:token@github.com/user/repo.git
+          TARGET_URL="https://x-access-token:$API_TOKEN_GITHUB@github.com/$DESTINATION_USER/$DESTINATION_REPO.git"
+          
+          echo "Syncing to $DESTINATION_USER/$DESTINATION_REPO..."
+          
+          # Add the target remote
+          git remote add destination "$TARGET_URL"
+          
+          # Force Push (Mirror Mode)
+          # --force ensures the target becomes an exact copy of the source
+          git push destination main:$DESTINATION_BRANCH --force
