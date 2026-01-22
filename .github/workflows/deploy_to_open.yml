@@ -10,7 +10,7 @@ jobs:
   mirror-sync:
     runs-on: ubuntu-latest
     steps:
-      # 1. Checkout full history (Required for mirroring) # 
+      # 1. Checkout full history (Required for mirroring)
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
