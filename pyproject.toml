@@ -51,18 +51,14 @@ ui = [
     "plotly>=6.5.2",
     "pydantic>=2.12.5",
     "numpy<2.0",
-    "click==8.1.7",
-    "coverage>=7.6.9",
-    "markdown>=3.10",
-    "loguru>=0.7.3",
-    "dvc[gs]>=3.66.1",
-]
-
-[dependency-groups]
 ]
 
 # Development dependencies
 dev = [
+    "click==8.1.7",
+    "coverage>=7.6.9",
+    "markdown>=3.10",
+    "dvc[gs]>=3.66.1",
     "coverage==7.6.9",
     "invoke==2.2.0",
     "pre-commit==4.1.0",
