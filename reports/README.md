@@ -134,7 +134,7 @@ will check the repositories and the code to verify your answers.
 >
 > Answer:
 
-s250221,
+s250221, s24972, s250272, s242872. 
 
 ### Question 3
 > **Did you end up using any open-source frameworks/packages not covered in the course during your project? If so**
@@ -148,7 +148,9 @@ s250221,
 >
 > Answer:
 
---- question 3 fill here ---
+First, we used MLCroissant, a library for machine learning dataset metadata. Instead of manually handling CSV files, we implemented an automated dataloader that retrieves the dataset directly from its source using the Croissant standard. This unified metadata format allows datasets to be loaded automatically and in the correct format without writing custom loading code or manual setup. With this choice, we ensure that the data pipeline is consistent and reproducible.
+
+Second, we integrated the Hugging Face Transformers library, an open-source framework that provided us with accessible state-of-the-art Natural Language Processing (NLP) models. Through this framework, we implemented a pre-trained DistilBERT model—a more compact and faster version of BERT—along with its tokenizer. By including this library, we added advanced NLP capabilities to our MBTI classification task without building complex transformer architectures from scratch. This approach improved model performance despite our limited training data and allowed us to focus on strengthening the deployment pipeline.
 
 ## Coding environment
 
@@ -168,7 +170,13 @@ s250221,
 >
 > Answer:
 
---- question 4 fill here ---
+We managed our project dependencies using uv (high-performance Python package manager introduced in the course), which we configured via a standard pyproject.toml file. With this approach we dicided to take, we managed to strictly define version constraints for core libraries such as, torch, fastapi and transformers, while isolating development tools like pytest and ruff into dedicated dependency groups. By separating them we ensure that our final app is clean by not installing unnecesary testing tools on the server while providing a full toolkit.
+
+To include a new team member and perform a correct onboarding to replicate the environment exactly, the process summarizes into a single command that handles both, environment creation and dependency resolution at the same time:
+
+The first step would be to clone the ropository following the git clone command. Following this, the new member would have to sync the environment by using the uv sync command.
+
+With this a virtual environment is directly created, resolving the dependencies from pyproject.toml, and installs all the required packages in the correct versions, ensuring identical local setups.
 
 ### Question 5
 
@@ -184,7 +192,19 @@ s250221,
 >
 > Answer:
 
---- question 5 fill here ---
+We used the mlops_template cookiecutter provided during the course to initialize our project. This provided us with a srandardized foundation where we primarly developed the content of the src/mbti_classifier directory. Instead of a deep nested structure we organized our source code into different Python scripts: data.py and model.py handle the core logic, train.py serves as the entry point for training, while api.py and ui.py manage the inference and frontend services.
+
+We also developed a strong configuration system in the configs/ directory. Structuring it hierarchically (model, data and trainer) and created specific execution modes (train_cpu.yaml, train_production.yaml,etc.) to switch easily between development and production environments.
+
+In the tests/ folder we expanded the testing structure to include both, unit an dintegration tests.
+
+Regarding the differences to the template structure, we extended it in the following ways:
+
+While the template included basic api and train Dockerfiles, we added a ui.dockerfile to contenerize our Streamlit frontend, with this, we created a complete three-service architecture (train, API,UI).
+
+Moreover, we added an AGENTS.md file to provide context and guidance for AI coding assistants such as copilot.
+
+Finally, we included an experiment tracking, we integrated Weights and Biases, as we can see in the wandb/ directory, to manage local logs and run artifacts, ensuring full visibility into our training metrics.
 
 ### Question 6
 
@@ -199,7 +219,16 @@ s250221,
 >
 > Answer:
 
---- question 6 fill here ---
+We enforced high code quality formats using Ruff and Pre-commit.
+
+We selected Ruff as our primary linter (reading the code to find logical errors) and formatter(fixing the style of the code) replacing the need for multiple slower tools. Ensuring the our code follows the PEP 8 standards, optimizes imports, and catches syntax errors instantaneously. Its configuration is centralized in our pyproject.toml file to ensure consistency across the team.
+
+To automate this, we implemented Pre-commit. A framework that manages Git hooks that trigger our quality checks automatically before every commit. If a file fails linting or formatting, the commit is strictly blocked until the issue is resolved. With this, we prevent dirty code from entering the version control history.
+
+All of this can be setup and runned with the following commands:
+uv run pre-commit install, one time setup.
+uv run pre-commit run --all-files, to manually run checks on all the files.
+
 
 ## Version control
 
@@ -218,7 +247,7 @@ s250221,
 >
 > Answer:
 
---- question 7 fill here ---
+We implemented a total of 27 tests using the pytest framework, covering both unit and integration levels to ensure system reliability. Our unit testing suite (23 tests) focuses on component isolation: test_model.py validates the DistilBERT wrapper and optimizer configuration, ensuring correct tensor shapes during the forward pass; test_data_module.py verifies the integrity of the data pipeline by checking that the LightningDataModule correctly constructs DataLoaders; and test_api.py uses unittest.mock to simulate model behavior, allowing us to test the FastAPI /predict endpoint logic without loading the heavy model into memory. Complementing this, our integration suite (4 tests) in test_pipeline.py validates end-to-end workflows, specifically confirming that raw data can be processed into a DataLoader and that saved model artifacts (best.ckpt) can be successfully reloaded for inference.
 
 ### Question 8
 
@@ -235,7 +264,7 @@ s250221,
 
 The total code coverage of our code is 77%, which includes the core logic of our API and model modules. We achieved this by implementing unit tests with pytest and pytest-cov, specifically targeting the mbti_classifier source code while omitting peripheral files like the UI and training scripts to ensure the metrics reflect the most critical inference components. Additionally, we recognize the importance of testing edge cases and performing integration tests to complement unit tests, as these help ensure robustness and reliability across different scenarios and system interactions.
 
-Even if our code reached 100% coverage, we would not trust it to be entirely error-free. Code coverage only measures which lines of code are executed during a test suite; it does not guarantee that the logic within those lines is correct or that the code can handle all possible edge cases and unexpected inputs. For example, an edge case like handling unexpected null values in a rarely used API endpoint might not be covered by unit tests. Similarly, integration issues such as mismatched data formats between two microservices could go unnoticed. High coverage ensures that the "paths" are tested, but it does not account for integration issues with external APIs or hardware-specific bugs that unit tests cannot simulate. Therefore, while 77% provides a strong safety net, it remains just one part of a broader quality assurance strategy.
+Even if our code reached 100% coverage, we would not trust it to be entirely error-free. Code coverage only measures which lines of code are executed during a testing; it does not guarantee that the logic within those lines is correct or that the code can handle all possible edge cases and unexpected inputs. For example, an edge case like handling unexpected null values in a rarely used API endpoint might not be covered by unit tests. Similarly, integration issues such as mismatched data formats between two microservices could go unnoticed. High coverage ensures that the "paths" are tested, but it does not account for integration issues with external APIs or hardware-specific bugs that unit tests cannot simulate. Therefore, while 77% provides a strong safety net, it remains just one part of a broader quality assurance strategy.
 
 ### Question 9
 
@@ -267,7 +296,11 @@ We used the main branch exclusively as our stable, clean version. To merge our c
 >
 > Answer:
 
---- question 10 fill here ---
+We did make use of DVC in order to manage our data assets by configuring a Google Cloud Storage (GCS) bucket as our remote backend (gs://mlops70_bucket/dvcstore).
+
+We found that by integrating DVC into our project we were able to decouple our heavy data files from our repository. Instead of pushing our large dataset to github, which we found that was really inneficient, we decided to separate our data from the code, the large files reside in GCS while our git repository is in charge of tracking only the tiny configuration files needed to retrieve this data.
+
+With this practice, we greatly improved our project by ensuring both, reproducibility and collaboration. Any member of our team could clone the repo and run dvc pull to retrieve the exact version of the data used for a particular experiment, ensuring that we all had consistent training environments maintaining the git repo clean and efficient.
 
 ### Question 11
 
@@ -284,13 +317,16 @@ We used the main branch exclusively as our stable, clean version. To merge our c
 >
 > Answer:
 
-Our Continuous Integration (CI) architecture is built on GitHub Actions and is organized into three distinct workflows to balance code quality, platform reliability, and resource efficiency. We chose GitHub Actions for its seamless integration with our repository, extensive community support, and ability to configure workflows with a build matrix and caching, which optimizes resource usage and ensures compatibility across multiple environments.
+Our Continuous Integration (CI) architecture is built on GitHub Actions and is organized into three distinct workflows to balance code quality, platform reliability, and resource efficiency. We chose GitHub Actions for its seamless integration with our repository, graet community support, and ability to configure workflows with a build matrix and caching, which optimizes resource usage and ensures compatibility across multiple environments.
 
-First, our core testing pipeline, `tests.yml`, is designed to ensure robustness across all development environments. We use a build matrix approach that automatically runs our full test on Ubuntu-latest, macOS-latest, and Windows-latest, while simultaneously checking compatibility against both Python 3.11 and 3.12. This ensures that our package works correctly regardless of a developer's local operating system. To optimize this process, we integrated the astral-sh/setup-uv action with dependency caching enabled. This setup reduces build times by caching the virtual environment and packages between runs, ensuring rapid feedback loops for developers without waiting for repeated downloads.
+First, our main testing pipeline, tests.yml, is designed to ensure robustness across all development environments. We use a build matrix approach that automatically runs our full test on Ubuntu-latest, macOS-latest, and Windows-latest, while simultaneously checking compatibility against both Python 3.11 and 3.12. This makes sure that our package works correctly no matter of the local operating system. To optimize this process, we integrated the astral-sh/setup-uv action with dependency caching enabled. This setup reduces build times by caching the virtual environment and packages between runs, ensuring rapid feedback loops without having to wait for repeated downloads.
 
-Secondly, we enforce strict code quality standards through pre-commit hooks. Rather than relying only on server-side checks that might fail 10 minutes after a push, we integrated hooks like trailing-whitespace and end-of-file-fixer. These run locally before every commit, automatically correcting formatting errors and preventing "nitpick" style issues from cluttering our project history or code reviews.
+Second, we enforce strict code quality standards through pre-commit hooks. Rather than relying only on server-side checks that might fail 10 minutes after a push, we integrated hooks like trailing-whitespace and end-of-file-fixer. These run locally before every commit, automatically correcting formatting errors and preventing syntax errors from cluttering our project history or code reviews.
 
 Finally, we implemented strategic event triggers to optimize computational resources. Training models and running full evaluations can be expensive. Therefore, we separated these tasks from our main CI loop. We created dedicated workflows, on_data_change.yml and on_model_change.yml, which use path filters to only trigger when changes are detected in the data/ or models/ directories respectively. This prevents redundant retraining or code fixes, saving both time and GitHub Actions compute minutes.
+
+https://mlopsgroup70.github.io/mlops_group70/
+
 
 ## Running code and tracking experiments
 
@@ -309,7 +345,13 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 12 fill here ---
+To manage and configure experiments we used Hydra instead of an argparser, allowing us to manage configurations hierarchically. Our main file, configs/train.yaml, composes the experiment configuration by importing default settings from sub directories that we've defined as model/, data/, and trainer/.
+
+To execute experiments, we use Hydra's command-line override syntax. Launching experiments with modified hyperparameters without altering the source code. For example:
+
+uv run train model.learning_rate=0.0001 trainer.max_epochs=20
+
+With this we ensure correct reproducibility by keeping all the default configurations controlled and at the same time allowing us to easily run different experiments and test different parameter combinations.
 
 ### Question 13
 
@@ -324,7 +366,16 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 13 fill here ---
+We secured reproducibility through a layered approach combining configuration management, data versioning, and rigorous experiment tracking.
+
+First, we utilize Hydra to manage all experiment configurations. Instead of hardcoding parameters or relying on fragile command-line arguments, we define them in hierarchical version-controlled `.yaml` files (for example `configs/train.yaml`). When an experiment runs, Hydra composes these configs and our training script logs the full parameter set, ensuring we know exactly what settings were used.
+
+Second, to ensure deterministic behavior, we explicitly set a global random seed via `pl.seed_everything(cfg.seed)` before initializing any models or data loaders.
+
+Third, we integrated Weights & Biases to automatically log training metrics, artifacts, and crucially the Git commit hash associated with each run.
+
+Finally, we track our dataset using DVC. This allows us to link specific data versions to our code. To reproduce an older experiment, one simply checks out the specific Git commit (restoring the code and config), pulls the corresponding data via `dvc pull`, and executes the training script.
+
 
 ### Question 14
 
@@ -341,7 +392,16 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 14 fill here ---
+As mentioned above, to ensure rigorous experiment tracking and reproducibility, we integrated Weights & Biases (W&B) into our training pipeline. This allowed us to monitor real-time training dynamics and assess model convergence without relying on ephemeral container logs.
+
+As delineated in Figure 1, we primarily track Validation Loss (val/loss), which serves as our objective function for optimization. The downward trend of the loss curve demonstrates that the DistilBERT model is effectively minimizing the error between predicted and actual MBTI types. The curve’s stabilization around global step 3,500 indicates that the model has reached a point of convergence, suggesting that further training would likely yield diminishing returns or lead to overfitting.
+
+Simultaneously, we monitor Average F1 Score (val/avg_f1) and Average Accuracy (val/avg_acc). While accuracy provides an intuitive measure of overall correctness, tracking the F1 score is crucial for this classification task; it accounts for potential class imbalances within the personality dataset by providing the mean of precision and recall.
+
+Crucially, our dashboard further granularizes performance by specific MBTI axes, such as Thinking-Feeling (val/TF_f1) and Sensing-Intuition (val/SN_f1). This specific tracking is key because personality classification is a multi-dimensional problem. By isolating these metrics, we can diagnose if the model struggles with specific traits (for example, distinguishing 'Sensing' from 'Intuition') even if global accuracy appears high. This monitoring strategy ensures that the minimization of the loss function translates directly into reliable, generalized predictive performance across all personality dimensions.
+
+![Figure 1: Experiment tracking](figures/q14.png)
+
 
 ### Question 15
 
@@ -356,12 +416,17 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 15 fill here ---
+For our project, we developed three Docker images managed with Docker Compose: one for training, one for the FastAPI inference server, and one for the Streamlit UI. This architecture effectively separates the training container, which functions as a one-time job that processes data and saves models, from the API and UI, which run as persistent services.
+
+A key architectural decision was to use shared volumes for the models/ directory. This strategy ensures that trained checkpoints persist across container lifecycles and facilitates immediate model loading by the API, thereby eliminating the need for redundant file replication. The containers communicate through Docker's internal networking, where the UI references the API service by name (http://api:8000) rather than localhost, enabling seamless inter-container communication.
+
+Moreover, we implemented health checks to ensure the API is fully operational before the UI starts, preventing connection errors during startup. Each image is optimized with only necessary dependencies—for instance, the API includes build tools for PyTorch compilation optimizations, while the UI container remains lightweight with just Streamlit and visualization libraries. This multi-container approach mirrors production microservices architecture and enables independent scaling of training, inference, and presentation layers.
+
 
 ### Question 16
 
 > **When running into bugs while trying to run your experiments, how did you perform debugging? Additionally, did you**
-> **try to profile your code or do you think it is already perfect?**
+> **try to profile your code or do you think it is already perfect?**  
 >
 > Recommended answer length: 100-200 words.
 >
@@ -371,7 +436,9 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 16 fill here ---
+Our debugging strategy relied heavily on a combination of visual monitoring, local testing, and unit tests. We integrated Weights & Biases (WandB) to track training dynamics in real-time. By monitoring loss curves and system metrics, we could quickly identify issues like exploding gradients or non-converging models without waiting for full training runs to complete. For code-level logic, we utilized our tests/ suite with pytest to isolate faulty components. Additionally, we maintained quick and cpu training configurations (e.g., configs/trainer/quick.yaml) which allowed us to step through the training loop locally using IDE debuggers or print statements, avoiding the overhead of cloud-based debugging.
+
+Regarding profiling, we did not perform extensive function-level profiling (e.g., using cProfile or PyTorch Profiler) as our training throughput was sufficient for our deadlines. However, we did implement performance optimizations such as torch.compile in our model definition to speed up the forward pass. Instead of deep code profiling, we relied on WandB's system metrics to ensure our GPU utilization was healthy and that we weren't bottlenecked by data loading.
 
 ## Working in the cloud
 
@@ -388,7 +455,17 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 17 fill here ---
+We used Google Cloud Storage (Bucket) as our only GCP service in this project.
+
+Google Cloud Storage is a scalable object storage service that provides reliable and cost-effective storage for unstructured data. In our project, we use a bucket named mlops70_bucket as the remote storage backend for DVC (Data Version Control).
+
+Specifically, the bucket stores:
+
+-⁠  ⁠Raw datasets (~8,600 MBTI personality samples from Kaggle)
+-⁠  ⁠Processed data (~430,000 preprocessed posts with binary labels)
+-  ⁠Model checkpoints (our trained DistilBERT model, ~800MB)
+
+This allows us to version control large files without storing them directly in Git, enabling reproducible experiments across different environments. Team members can pull the exact versions of data and models used in any experiment by running dvc pull, which fetches the files from the GCS bucket using content-addressable storage (MD5 hashes).
 
 ### Question 18
 
@@ -403,7 +480,7 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 18 fill here ---
+We didn't use Compute Enginer in our project.
 
 ### Question 19
 
@@ -412,7 +489,7 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 19 fill here ---
+![Figure 2: GCP bucket](figures/gcp.jpegjpeg)
 
 ### Question 20
 
@@ -421,7 +498,8 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 20 fill here ---
+
+We didn't use Artifact Registry in our project.
 
 ### Question 21
 
@@ -430,7 +508,7 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 21 fill here ---
+We didn't use GCP cloud build in our project.
 
 ### Question 22
 
@@ -445,7 +523,12 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 22 fill here ---
+
+We did not use Vertex AI or Google Cloud Engine for model training, primarily due to a strategic prioritization of resource efficiency and reproducibility over raw compute power.
+
+Our DistilBERT model and dataset were sufficiently sized to be trained on local hardware and standard CI/CD runners, making the complexity and cost overhead of provisioning managed cloud GPU instances unnecessary for our immediate scope. Instead, we focused our efforts on creating a "cloud-ready" architecture using Docker Compose and DVC. By strictly containerizing our training environment and decoupling data via GCS, we achieved the core MLOps goal of portability.
+
+While we didn't execute the final training job on Vertex AI, our architecture is designed such that migrating to the cloud would be seamless: it would simply require pushing our existing `train.dockerfile` image to the Artifact Registry and submitting a job, rather than refactoring the codebase. We prioritized rigorous testing, robust CI/CD pipelines, and data versioning foundations which we believe add more value to the project's lifecycle than the compute location itself.
 
 ## Deployment
 
@@ -462,7 +545,11 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 23 fill here ---
+We did manage to succesfully implement an API using FastAPI to deploy our MBTI classifier. The core of it is src/mbti_classifier/api.py, here we define a predict/ endpoint that accepts raw text and returns the predicted personality type alongside probability scores for each type. We used Pydantic models to ensure a strict input validation, for example that the inserted text has a minimum input, with this we also guarantee a structured response.
+
+A key optimization strategy that we implemented was separating the inference environment from training. We created an api.dockerfile that builds a lightweight image using python:3.12-slim and uv, installing only the runtime dependencies necessary for inference. This significantly reduces the container size compared to the training environment.
+
+Furthermore, we ensured reliability by implementing a robust testing strategy in tests/unit/test_api.py. We used unittest.mock to patch the heavy DistilBERT model and tokenizer during testing. Specifically, we mocked the model's forward pass to return predefined logits and the tokenizer's output to return simulated input tensors. This allowed us to verify the API's logic, error handling, and data validation instantaneously without the necessity of loading the full model.
 
 ### Question 24
 
@@ -478,7 +565,16 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 24 fill here ---
+We successfully deployed our model locally using a containerized architecture managed by Docker Compose. We wrapped our DistilBERT model in a FastAPI application and built a dedicated image using our `dockerfiles/api.dockerfile`. This deployment serves the application on `http://localhost:8000`, ensuring the inference environment is isolated from training dependencies.
+
+To invoke the service, any client can send a standardized HTTP POST request to the `/predict` endpoint with a JSON payload. For example, using `curl` in the terminal:
+
+
+curl -X POST "http://localhost:8000/predict" \
+  -H "Content-Type: application/json" \
+  -d '{"text": "I enjoy solving complex problems alone and reading books."}'
+
+
 
 ### Question 25
 
@@ -493,7 +589,9 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 25 fill here ---
+ We performed extensive unit testing on our API using pytest and FastAPI's TestClient. We can find this in tests/unit/test_api.py, we isolated the API logic by mocking the heavy machine learning components (the DistilBERT model and tokenizer) using unittest.mock. This allowed us to verify critical functionality without memory overhead, including: Endpoint Stability to ensuring valid requests return status 200 and the correct JSON structure, Input Validation to verify that our Pydantic models correctly reject invalid inputs (for example, text under 10 characters) with 400 errors and Error Handling, confirming the system fails gracefully if the model is not loaded.
+
+Moreover, regarding Load Testing, we did not perform formal load testing in this iteration. However, to do so, we would use Locust. We would implement a locustfile.py defining a HttpUser class that sends POST requests to the /predict endpoint with randomized text payloads. We would start with a small number of simulated users and gradually increase the traffic. We would determine the system's limit by observing when the API starts getting too slow (taking longer than 500ms to respond) or begins crashing. This would give us the maximum Requests Per Second (RPS) our service can handle before saturation.
 
 ### Question 26
 
@@ -508,7 +606,12 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 26 fill here ---
+We did not implement a dedicated monitoring service for our deployed model, as our current architecture is focused on development and local deployment. However, we recognize that implementing monitoring would be essential for the longevity and reliability of a production application.
+
+In a production setting, we would prioritize monitoring data drift and prediction drift. Since personality language patterns change over time (such as new slang or topics on social media), the input distribution could diverge from our training data (PersonalityCafe posts), leading to performance degradation. Monitoring tools like Evidently AI or Prometheus could track these statistical properties.
+
+Additionally, we would benefit from tracking system metrics (latency, throughput, memory usage) to ensure the API remains responsive under load. If we detected that average inference time increased significantly or that the distribution of predicted classes skewed heavily (such as suddenly predicting 100% "Introvert"), an automated alert system could notify us to retrain the model or investigate the data pipeline, ensuring the application remains robust and accurate over years of operation.
+
 
 ## Overall discussion of project
 
@@ -527,7 +630,10 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 27 fill here ---
+We utilized approximately $5 USD in Google Cloud credits throughout the project's development lifecycle. While we maintained a consistent, low-cost footprint with GCS for our DVC remote backend, the primary cost driver was the Compute Engine. These costs were accrued during initial testing phases where we experimented with model training and container deployment on remote virtual machines, although we ultimately did not fully automate the cloud training pipeline in the final iteration.
+
+Reflecting on the experience, cloud development offered significant advantages in terms of decoupling performance from local hardware constraints and facilitating centralized collaboration. It provided a unified environment where all team members could access shared artifacts and resources. However, the transition from local to cloud infrastructure presented a steep learning curve. The complexity involved in configuring IAM permissions, managing service account keys, and establishing secure networking for our containers highlighted that while the cloud offers scalability, it demands a substantial upfront investment in configuration and infrastructure management compared to local development.
+
 
 ### Question 28
 
@@ -543,7 +649,10 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 28 fill here ---
+We implemented a Streamlit frontend to make our model accessible to non-technical users. Our `ui.py` application provides a clean, interactive interface where users can input text and instantly visualize their personality prediction. We chose Streamlit for its ability to rapidly prototype data apps in pure Python. A standout feature is the interactive radar chart (built with Plotly), which visualizes the probability distribution across the four MBTI dimensions (E/I, S/N, T/F, J/P), offering deeper insights than a simple classification label. The UI is containerized (`dockerfiles/ui.dockerfile`) and communicates seamlessly with our API container.
+
+ Additionally, we automated our project documentation using MkDocs and GitHub Pages. We created a comprehensive documentation site that includes architecture diagrams, API references, and user guides. By configuring a CI/CD workflow (`deploy_docs.yaml`), any update to the documentation in the `main` branch automatically builds and deploys the static site to GitHub Pages, ensuring our documentation is always synchronized with the codebase.
+
 
 ### Question 29
 
@@ -560,7 +669,26 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 29 fill here ---
+![Figure 3: Architecture Overview](figures/mlops_group70-Página-2.drawio.png)
+
+The diagram illustrates the complete MLOps lifecycle of our MBTI classification project, separated into key operational domains:
+
+- Local Development & Experimentation:
+The process begins in our local environment. We used Cookiecutter to scaffold the initial project structure, ensuring standardized formatting. Code quality is strictly enforced during development using Ruff for linting and formatting, alongside Pytest for unit testing, all orchestrated via Git hooks.
+For experiment tracking, we integrated W&B directly into our Hydra-configured training scripts. This allows us to log metrics (loss, accuracy) and artifacts automatically whenever a training job is executed.
+Crucially, our data management relies on DVC, which pushes and pulls large datasets to/from our GCS Bucket, decoupling heavy data from our lightweight Git repository.
+
+- Continuous Integration (CI):
+Upon pushing code to GitHub, our GitHub Actions pipeline is triggered. This automated workflow runs our test suite (`pytest`) and linting checks (`ruff`) on a matrix of operating systems to ensure cross-platform compatibility and code integrity before any merge.
+
+- Containerized Deployment:
+The core of our deployment strategy is Docker Compose, which orchestrates three distinct services:
+1.  Training Container: Encapsulates the training logic, consuming data from local storage (synced via DVC) and saving the best model checkpoints to a shared volume.
+2.  API Container: Runs a FastAPI server that loads the trained model from the shared volume and exposes a REST endpoint for inference.
+3.  UI Container: hosts a Streamlit application that acts as the frontend, sending user requests to the API and visualizing the results.
+
+This architecture ensures a seamless flow from local code changes to specific, reproducible containerized deployments, underpinned by cloud storage for data persistence.
+
 
 ### Question 30
 
@@ -574,7 +702,11 @@ Finally, we implemented strategic event triggers to optimize computational resou
 >
 > Answer:
 
---- question 30 fill here ---
+The most significant challenges we encountered during this project come from collaborative software engineering and the intricacies of optimizing transformer-based architectures.
+
+First, coordinating parallel development on a unified shared codebase was challenging. Orchestrating simultaneous feature integration across different local environments required rigorous version control discipline. We overcame this by enforcing a strict Pull Request workflow and a comprehensive Continuous Integration pipeline, which minimized integration conflicts and ensured strict code stability.
+
+Second, a substantial portion of our resources was dedicated to the optimal configuration and training of the model. Improving the efficiency of our multi-task classifier required a deep, low-level understanding of the underlying BERT architecture. A specific hustle was handling the model's token limit without inducing overfitting or losing critical context. To address this, we engineered a specific data preprocessing pipeline that utilized random information windows rather than simple truncation. This technique allowed the model to process long sequences efficiently by sampling different sections of text during training, ultimately balancing computational performance with robust generalization.
 
 ### Question 31
 
@@ -592,4 +724,12 @@ Finally, we implemented strategic event triggers to optimize computational resou
 > *We have used ChatGPT to help debug our code. Additionally, we used GitHub Copilot to help write some of our code.*
 > Answer:
 
---- question 31 fill here ---
+Student s250272 was responsible for the core MLOps engineering and application development. This involved setting up the initial repository with Cookiecutter, configuring GitHub Actions for cross-platform Continuous Integration, and implementing code quality pipelines using Ruff. They developed the modular training system using Torch Lightning and Hydra for hyperparameter management, integrated Weights & Biases for experiment tracking, and engineered the full inference stack (FastAPI and Streamlit) orchestrating it via Docker Compose.
+
+Student s243972 managed the project lifecycle and cloud infrastructure. They defined the project scope and model selection strategy, set up the Google Cloud Platform environment, and linked Google Buckets with DVC for data and model versioning. Additionally, they handled the creation of base Docker images/Dockerfiles, deployed the documentation using MkDocs and GitHub Pages, and designed the MLOps architecture diagrams.
+
+Student s250221 focused on the modeling and testing strategy, creating the baseline model to establish performance benchmarks. They collaborated closely with the team on implementing Continuous Integration workflows and ensuring robust data coverage and testing standards.
+
+Student s242872 was in charge of the initial data phase, performing the necessary preprocessing and cleaning to prepare the dataset for the pipeline.
+
+All members contributed to the code quality and the writing of the final report. We have used ChatGPT to help debug our code. Additionally, we used GitHub Copilot to help write some of our code.
