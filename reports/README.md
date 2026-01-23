@@ -192,19 +192,19 @@ With this a virtual environment is directly created, resolving the dependencies 
 >
 > Answer:
 
-We used the mlops_template cookiecutter provided during the course to initialize our project. This provided us with a srandardized foundation where we primarly developed the content of the src/mbti_classifier directory. Instead of a deep nested structure we organized our source code into different Python scripts: data.py and model.py handle the core logic, train.py serves as the entry point for training, while api.py and ui.py manage the inference and frontend services.
+We initialized our project using the course's mlops_template cookiecutter. This standardized foundation allowed us to focus on the src/mbti_classifier directory. Avoiding a deep nested structure, we organized our source code into distinct scripts: data.py and model.py handle core logic, train.py serves as the entry point for training, while api.py and ui.py manage inference and frontend services.
 
-We also developed a strong configuration system in the configs/ directory. Structuring it hierarchically (model, data and trainer) and created specific execution modes (train_cpu.yaml, train_production.yaml,etc.) to switch easily between development and production environments.
+We also developed a robust configuration system in the configs/ directory. Structuring it hierarchically (model, data and trainer) and created specific execution modes (train_cpu.yaml, train_production.yaml, etc.) to switch easily between development and production environments.
 
-In the tests/ folder we expanded the testing structure to include both, unit an dintegration tests.
+In the tests/ folder we expanded the testing structure to include both unit and integration tests.
 
 Regarding the differences to the template structure, we extended it in the following ways:
 
-While the template included basic api and train Dockerfiles, we added a ui.dockerfile to contenerize our Streamlit frontend, with this, we created a complete three-service architecture (train, API,UI).
+While the template included basic api and train Dockerfiles, we added a ui.dockerfile to containerize our Streamlit frontend, creating a complete three-service architecture (train, API, UI).
 
 Moreover, we added an AGENTS.md file to provide context and guidance for AI coding assistants such as copilot.
 
-Finally, we included an experiment tracking, we integrated Weights and Biases, as we can see in the wandb/ directory, to manage local logs and run artifacts, ensuring full visibility into our training metrics.
+Finally, we integrated Weights and Biases (see the wandb/ directory) for experiment tracking, managing local logs and artifacts to ensure full visibility into our training metrics.
 
 ### Question 6
 
@@ -247,7 +247,7 @@ uv run pre-commit run --all-files, to manually run checks on all the files.
 >
 > Answer:
 
-We implemented a total of 27 tests using the pytest framework, covering both unit and integration levels to ensure system reliability. Our unit testing suite (23 tests) focuses on component isolation: test_model.py validates the DistilBERT wrapper and optimizer configuration, ensuring correct tensor shapes during the forward pass; test_data_module.py verifies the integrity of the data pipeline by checking that the LightningDataModule correctly constructs DataLoaders; and test_api.py uses unittest.mock to simulate model behavior, allowing us to test the FastAPI /predict endpoint logic without loading the heavy model into memory. Complementing this, our integration suite (4 tests) in test_pipeline.py validates end-to-end workflows, specifically confirming that raw data can be processed into a DataLoader and that saved model artifacts (best.ckpt) can be successfully reloaded for inference.
+We implemented 27 tests using pytest, covering unit and integration levels to ensure reliability. Our unit suite (23 tests) focuses on component isolation: test_model.py validates the DistilBERT wrapper and optimizer ensuring correct tensor shapes; test_data_module.py verifies the data pipeline and DataLoader construction; and test_api.py mocks model behavior to test FastAPI logic without loading the heavy model. Complementing this, our integration suite (4 tests) in test_pipeline.py validates end-to-end workflows, specifically confirming that raw data is correctly processed and saved model artifacts (best.ckpt) can be reloaded for inference.
 
 ### Question 8
 
@@ -262,9 +262,9 @@ We implemented a total of 27 tests using the pytest framework, covering both uni
 >
 > Answer:
 
-The total code coverage of our code is 77%, which includes the core logic of our API and model modules. We achieved this by implementing unit tests with pytest and pytest-cov, specifically targeting the mbti_classifier source code while omitting peripheral files like the UI and training scripts to ensure the metrics reflect the most critical inference components. Additionally, we recognize the importance of testing edge cases and performing integration tests to complement unit tests, as these help ensure robustness and reliability across different scenarios and system interactions.
+The total code coverage is 77%, encompassing the core logic of our API and model modules. We achieved this using pytest and pytest-cov, targeting the `mbti_classifier` source code while omitting peripheral files like the UI and training scripts to reflect critical inference components. We also perform integration tests to complement unit tests, ensuring robustness across different system interactions.
 
-Even if our code reached 100% coverage, we would not trust it to be entirely error-free. Code coverage only measures which lines of code are executed during a testing; it does not guarantee that the logic within those lines is correct or that the code can handle all possible edge cases and unexpected inputs. For example, an edge case like handling unexpected null values in a rarely used API endpoint might not be covered by unit tests. Similarly, integration issues such as mismatched data formats between two microservices could go unnoticed. High coverage ensures that the "paths" are tested, but it does not account for integration issues with external APIs or hardware-specific bugs that unit tests cannot simulate. Therefore, while 77% provides a strong safety net, it remains just one part of a broader quality assurance strategy.
+Even if we reached 100% coverage, we would not trust the code to be entirely error-free. Coverage measures executed lines, not logical correctness or handling of all edge cases. For example, handling unexpected null values in a rare API endpoint might be missed. Similarly, integration issues like mismatched data formats between microservices could go unnoticed. High coverage ensures paths are tested but does not account for integration issues or hardware-specific bugs. Thus, while 77% is a strong safety net, it remains just one part of our quality assurance strategy.
 
 ### Question 9
 
@@ -480,7 +480,6 @@ This allows us to version control large files without storing them directly in G
 >
 > Answer:
 
-We didn't use Compute Enginer in our project.
 
 ### Question 19
 
@@ -499,8 +498,6 @@ We didn't use Compute Enginer in our project.
 > Answer:
 
 
-We didn't use Artifact Registry in our project.
-
 ### Question 21
 
 > **Upload 1-2 images of your GCP cloud build history, so we can see the history of the images that have been build in**
@@ -508,7 +505,6 @@ We didn't use Artifact Registry in our project.
 >
 > Answer:
 
-We didn't use GCP cloud build in our project.
 
 ### Question 22
 
@@ -565,9 +561,9 @@ Furthermore, we ensured reliability by implementing a robust testing strategy in
 >
 > Answer:
 
-We successfully deployed our model locally using a containerized architecture managed by Docker Compose. We wrapped our DistilBERT model in a FastAPI application and built a dedicated image using our `dockerfiles/api.dockerfile`. This deployment serves the application on `http://localhost:8000`, ensuring the inference environment is isolated from training dependencies.
+We successfully deployed our model locally using a containerized microservices architecture managed by Docker Compose. We wrapped our DistilBERT model in a FastAPI application and built a dedicated image using our `dockerfiles/api.dockerfile`. This deployment serves the application on `http://localhost:8000`, ensuring the inference environment is clean and completely isolated from training dependencies.
 
-To invoke the service, any client can send a standardized HTTP POST request to the `/predict` endpoint with a JSON payload. For example, using `curl` in the terminal:
+To invoke the inference service, any client can send a standardized HTTP POST request to the `/predict` endpoint with a JSON payload. For example, using `curl` in the terminal:
 
 
 curl -X POST "http://localhost:8000/predict" \
@@ -702,11 +698,13 @@ This architecture ensures a seamless flow from local code changes to specific, r
 >
 > Answer:
 
-The most significant challenges we encountered during this project come from collaborative software engineering and the intricacies of optimizing transformer-based architectures.
+The most significant challenges we encountered during this project come from collaborative software engineering, the intricacies of optimizing transformer-based architectures, and the complex integration of diverse technologies.
 
 First, coordinating parallel development on a unified shared codebase was challenging. Orchestrating simultaneous feature integration across different local environments required rigorous version control discipline. We overcame this by enforcing a strict Pull Request workflow and a comprehensive Continuous Integration pipeline, which minimized integration conflicts and ensured strict code stability.
 
 Second, a substantial portion of our resources was dedicated to the optimal configuration and training of the model. Improving the efficiency of our multi-task classifier required a deep, low-level understanding of the underlying BERT architecture. A specific hustle was handling the model's token limit without inducing overfitting or losing critical context. To address this, we engineered a specific data preprocessing pipeline that utilized random information windows rather than simple truncation. This technique allowed the model to process long sequences efficiently by sampling different sections of text during training, ultimately balancing computational performance with robust generalization.
+
+Finally, connecting all the different technologies was a major challenge. Orchestrating the interoperability between Hydra, DVC, Weights & Biases, and Docker required meticulous configuration to ensure that local development environments, CI pipelines, and containerized deployments functioned as a seamless and unified system.
 
 ### Question 31
 
